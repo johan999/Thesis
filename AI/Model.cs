@@ -28,7 +28,7 @@ namespace AI
     //Restriction for an arc
     public class ArcRestriction_DTO
     {       
-        public string id { get; private set; }  //Restriction id
+        public string id { get; set; }  //Restriction id
         public IEnumerable<int> grades { get; set; }    //Grades which the restriction affect
         public int type { get; set; }           //Restriction number
         public string typeText { get; set; }    //Restriction name       
