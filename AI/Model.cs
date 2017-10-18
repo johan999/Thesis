@@ -16,7 +16,7 @@ namespace AI
         public static Network_DTO LoadJson(string name)
         {
             //File path
-            string jsonText = System.IO.File.ReadAllText(Path.Combine("c:/ai_data", name));
+            string jsonText = System.IO.File.ReadAllText(Path.Combine("Data/", name));
 
             //Deserialize json
             Network_DTO network = JsonConvert.DeserializeObject<Network_DTO>(jsonText);

@@ -38,7 +38,7 @@ namespace AI
             //Just for later generalization
             string jsonName = "norrkoping_v2";
             Network_DTO roadNetwork = Network_DTO.LoadJson(jsonName + ".json");
-            CreateInputList(roadNetwork);
+            //CreateInputList(roadNetwork);
             //CreateANN();
             
             Console.ReadLine();
