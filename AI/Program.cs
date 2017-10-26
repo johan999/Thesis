@@ -1,14 +1,15 @@
 ﻿using AForge.Neuro;
 using AForge.Neuro.Learning;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace AI
 {
     class Program
     {
-
         //ta reda på hur många!!!!
         const int RESTRICTIONS = 8;
 
@@ -47,42 +48,47 @@ namespace AI
         static void Main(string[] args)
         {
             //Just for later generalization
-            DisplayData();
+            //DisplayData();
             //string municipality = Console.ReadLine();
-             
+
             string jsonName = "norrkoping";
             Network_DTO roadNetwork = Network_DTO.LoadJson(jsonName + ".json");
-            //CreateInputList(roadNetwork);
-            double[][] outputList = CreateOutputList(roadNetwork);
+
+            //TestCurve();
+
+            double[][] inputList = CreateInputList(roadNetwork);
+            //double[][] outputList = CreateOutputList(roadNetwork);
             //CreateANN();
-            
+
             Console.ReadLine();
         }
 
         //Input should return:        
         //Speed, Traffic flow, Visibility, Light, Pavement
-        public static double[][] CreateInputList(Network_DTO net)
+        public static double[][] CreateInputList(Network_DTO network)
         {
-            double[][] tempList = null;
-            int nr = 0;
-            foreach (Arc_DTO arc in net.arcs)
-            {         
-                
-                double birdDist = 
+            double[][] inputList = new double[network.arcs.Count()][];
+            int listNr = 0;
+            foreach (Arc_DTO arc in network.arcs)
+            {
+                double birdDist =
                     Processing.CalculateDistanceInKilometers(
                         arc.locations.First(), arc.locations.Last());
-                double totalDist = 
+                double totalDist =
                     Processing.CalculateDistanceInKilometers(
                         arc.locations);
 
+                //If birdDist != totalDist => atleast one curve in the arc
                 if (birdDist != totalDist)
                 {
-                    double[] curves = Processing.EvaluateCurves(arc.locations);
+                    double curves = Processing.EvaluateCurves(arc.locations);
+
                 }
-                double[] tempInput = { 1.0, 1.0, 1.0, 1.0, 0.5 };
-                tempList[nr] = tempInput;
+                double[] input = { 1.0, 1.0, 1.0, 1.0, 0.5 };
+                inputList[listNr] = input;
+                listNr++;
             }
-            return tempList;
+            return inputList;
         }
 
         //Creates an output list. 
@@ -90,27 +96,26 @@ namespace AI
         //The array length is the number of possible restrictions
         //If an arc has a restriction the position in the array corresponding to the same 
         //type number of a restriction - 1, get the value 1, the rest 0. e.g {0, 1, 0, 0} type 2
-        public static double[][] CreateOutputList(Network_DTO net)
+        public static double[][] CreateOutputList(Network_DTO network)
         {
+            double[][] outputList = new double[network.arcs.Count()][];
+            int listNr = 0;
 
-            double[][] outputList = new double[net.arcs.Count()][];
-            int listNr = 0;            
-
-            foreach (Arc_DTO arc in net.arcs)
+            foreach (Arc_DTO arc in network.arcs)
             {
-                double[] listElement = new double[RESTRICTIONS];
+                double[] restrictionOutput = new double[RESTRICTIONS];
                 if (arc.arcRestrictionIds.Any())
                 {
-                    foreach (string restriction in arc.arcRestrictionIds)
+                    foreach (string restrictionID in arc.arcRestrictionIds)
                     {
-                        int resNr = net.restrictions.Where(a => a.id == restriction).First().type - 1;
-                        listElement[resNr] = 1.0;
+                        int restrictionNr = network.restrictions.Where(a => a.id == restrictionID).First().type - 1;
+                        restrictionOutput[restrictionNr] = 1.0;
                     }
-                    outputList[listNr] = listElement;
+                    outputList[listNr] = restrictionOutput;
                 }
                 else
                 {
-                    outputList[listNr] = listElement;
+                    outputList[listNr] = restrictionOutput;
                 }
                 listNr++;
             }
@@ -129,14 +134,14 @@ namespace AI
             new double[] {1}, new double[] {0}
             };
 
-            int[] layers = {2, 1}; //two neurons in the first layer, one in the second
+            int[] layers = { 2, 1 }; //two neurons in the first layer, one in the second
 
             // create neural network
             ActivationNetwork network = new ActivationNetwork(
                 new SigmoidFunction(),
                 2, // two inputs in the network
                 layers);
-            
+
             // create teacher
             BackPropagationLearning teacher = new BackPropagationLearning(network);
 
@@ -158,11 +163,27 @@ namespace AI
         public static void DisplayData()
         {
             Console.WriteLine("Choose data set to load:");
-            for(int i = 0; i < dataSets.Length; i++)
+            for (int i = 0; i < dataSets.Length; i++)
             {
                 Console.WriteLine(i + 1 + ". " + dataSets[i]);
             }
             Console.WriteLine("Norrkoping was selected");
         }
+
+        /*public static void TestCurve()
+        {
+            Console.WriteLine("Test: ");
+            string jsonLocation = System.IO.File.ReadAllText(Path.Combine("Data/", "test.json"));
+
+            Test_Location_DTO test = 
+                JsonConvert.DeserializeObject<Test_Location_DTO>(jsonLocation);
+            var t = Processing.EvaluateCurves(test.locations);
+            Console.WriteLine("Locations.count: " + test.locations.Count());
+            foreach (double[] d in t)
+            {
+                Console.WriteLine("Angle: " + d[0] + ", Length: " + d[1]);
+            }
+            
+        } */      
     }
 }

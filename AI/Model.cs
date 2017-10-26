@@ -66,4 +66,10 @@ namespace AI
         public double lat { get; set; }
         public double lon { get; set; }
     }   
+
+
+    public class Test_Location_DTO
+    {
+        public IEnumerable<Location_DTO> locations { get; set; }
+    }
 }
