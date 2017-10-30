@@ -73,8 +73,10 @@ namespace AI
                         / (2.0 * frontDist * backDist));
                     if (!HasValue(angle))
                     {
-                        Console.WriteLine("NaN! H: " + hypotenuse + " f: " + frontDist
-                            + " b: " + backDist + " a: " + angle);
+                        Console.WriteLine("NaN! H: " + hypotenuse + " f: " + frontDist + " b: " + backDist + 
+                            "\n P0: " + t.p0.lat + " " + t.p0.lon + 
+                            " P1: " + t.p1.lat + " " + t.p1.lon + 
+                            " P2: " + t.p2.lat + " " + t.p2.lon);
                         angle = 0.0;
                     }
                     if(angle < 0)

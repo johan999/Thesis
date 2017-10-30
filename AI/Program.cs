@@ -1,8 +1,6 @@
-﻿using AForge.Neuro;
-using AForge.Neuro.Learning;
-using Newtonsoft.Json;
+﻿using Accord.Neuro;
+using Accord.Neuro.Learning;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -10,61 +8,99 @@ namespace AI
 {
     class Program
     {
-        //ta reda på hur många!!!!
-        const int RESTRICTIONS = 8;
-
-        //Input for the ANN
-        public class Input
-        {
-            public int speed { get; set; } //km/t
-            public int walk { get; set; }  //1: Unknown, Walking, Driving 
-            public int trafficFlow { get; set; } // vehicles/day
-            public int light { get; set; } //1: Good, 2: Bad, 3: None
-            public double visibility { get; set; } //Straight road - Sharp curves, 0.0 - 1.0
-
-            public Input(int speed, int walk, int trafficFlow, int light, double visibility)
-            {
-                this.speed = speed;
-                this.walk = walk;
-                this.trafficFlow = trafficFlow;
-                this.light = light;
-                this.visibility = visibility;
-            }
-        }
-
-        //Output for the ANN
-        public class Output
-        {
-            public int[] restrictions { get; set; } //All restrictions numbers for a network
-
-            public Output(int[] restrictions)
-            {
-                this.restrictions = restrictions;
-            }
-        }
-
-
-        public static int nrOfArcRestrictions = 0;
+        const int RESTRICTIONS = 2;
+        static int choice = 0;
         static void Main(string[] args)
         {
-            //Just for later generalization
-            //DisplayData();
-            //string municipality = Console.ReadLine();
+            //Empty variables
+            Network_DTO roadNetwork = null;
+            double[][] inputList = null;
+            double[][] outputList = null;
+            ActivationNetwork ANN = null;
 
-            string jsonName = "norrkoping";
-            Network_DTO roadNetwork = Network_DTO.LoadJson(jsonName + ".json");
+            while (choice != 6) {
+                choice = DisplayData();
+                switch (choice)
+                {
+                    case 1:
+                        string[] files = Directory.GetFiles("Data/");
+                        int count = 1;
+                        Console.WriteLine("Choose file: ");
+                        foreach (string s in files)
+                        {
+                            Console.WriteLine(count + ". " + s);
+                            count++;
+                        }
+                        
+                        roadNetwork = Network_DTO.LoadJson(files[
+                            Convert.ToInt32(Console.ReadLine())-1]);
 
-            //TestCurve();
+                        inputList = CreateInputList(roadNetwork);
+                        outputList = CreateOutputList(roadNetwork);
 
-            double[][] inputList = CreateInputList(roadNetwork);
-            //double[][] outputList = CreateOutputList(roadNetwork);
-            //CreateANN();
+                        break;
+                    case 2:
+                        if (roadNetwork != null)
+                        {
+                            ANN = CreateANN(inputList, outputList);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Did not load or empty network!");
+                        }
+                        break;
+                    case 3:
+                        Console.WriteLine("Saved neural network");
+                        if (ANN != null)
+                        {
+                            ANN.Save("ANN/neuralnetwork.json");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Neural network is null");
+                        }
+                        break;
+                    case 4:
+                        Console.WriteLine("Loaded neural network");
+                        ANN = (ActivationNetwork)Network.Load("ANN/neuralnetwork.json");
+                        if (ANN == null)
+                        {
+                            Console.WriteLine("Could not load network");
+                        }
+                        break;
+                    case 5:
+                        if (inputList != null && ANN != null && outputList != null)
+                        {
+                            double[][] output = ComputeNetwork(inputList, ANN);
+                            NetworkComparison(output, outputList);
+                        }
+                        if(inputList == null)
+                        {
+                            Console.WriteLine("Missing input");
+                        }
+                        if(ANN == null)
+                        {
+                            Console.WriteLine("Missing ANN");
+                        }
+                        if (outputList == null)
+                        {
+                            Console.WriteLine("Missing output");
+                        }
 
-            Console.ReadLine();
+                        break;
+                    case 6:
+                        Console.WriteLine("Bye...");
+                        break;
+                    case 7:
+                        Console.WriteLine(ANN.Compute(new double[]{2.450})[0]);
+                        break;
+                }
+                Console.WriteLine();
+            }
         }
 
         //Input should return:        
-        //Speed, Traffic flow, Visibility, Light, Pavement
+        //Sinuosity
         public static double[][] CreateInputList(Network_DTO network)
         {
             double[][] inputList = new double[network.arcs.Count()][];
@@ -77,16 +113,17 @@ namespace AI
                 double totalDist =
                     Processing.CalculateDistanceInKilometers(
                         arc.locations);
-
+                double curves = 0.0;
                 //If birdDist != totalDist => atleast one curve in the arc
                 if (birdDist != totalDist)
                 {
-                    double curves = Processing.EvaluateCurves(arc.locations);
-
+                    curves = Processing.EvaluateCurves(arc.locations);
                 }
-                double[] input = { 1.0, 1.0, 1.0, 1.0, 0.5 };
-                inputList[listNr] = input;
+
+                inputList[listNr] = new double[] { curves, 50 };
+                //Console.WriteLine("input: " + inputList[listNr][0]);
                 listNr++;
+                
             }
             return inputList;
         }
@@ -94,8 +131,8 @@ namespace AI
         //Creates an output list. 
         //For each arc a double[] is created and placed in the list.
         //The array length is the number of possible restrictions
-        //If an arc has a restriction the position in the array corresponding to the same 
-        //type number of a restriction - 1, get the value 1, the rest 0. e.g {0, 1, 0, 0} type 2
+        //If an arc has a restriction, the position in the array corresponding to the same 
+        //type number of a restriction - 1, gets the value 1, the rest 0. e.g {0, 1, 0, 0} type 2
         public static double[][] CreateOutputList(Network_DTO network)
         {
             double[][] outputList = new double[network.arcs.Count()][];
@@ -122,52 +159,109 @@ namespace AI
             return outputList;
         }
 
-        public static void CreateANN(Input i, Output o)
-        {
-            // initialize input and output values
-            double[][] input = new double[4][] {
-            new double[] {0, 0}, new double[] {0, 1},
-            new double[] {1, 0}, new double[] {1, 1}
-            };
-            double[][] output = new double[4][] {
-            new double[] {0}, new double[] {1},
-            new double[] {1}, new double[] {0}
-            };
+        public static ActivationNetwork CreateANN(double[][] input, double[][] output)
+        {   
+            var watch = System.Diagnostics.Stopwatch.StartNew();
 
-            int[] layers = { 2, 1 }; //two neurons in the first layer, one in the second
+            int[] layers = { 4, RESTRICTIONS }; //neurons per layer(lenght), last is output
 
             // create neural network
             ActivationNetwork network = new ActivationNetwork(
                 new SigmoidFunction(),
-                2, // two inputs in the network
-                layers);
-
+                2,      //Input
+                layers);//Hidden layers + output
+   
             // create teacher
             BackPropagationLearning teacher = new BackPropagationLearning(network);
 
             bool needToStop = false;
 
             // loop
+            int epochs = 0;
+            int epochsHundreds = 0;
+            double prevError = 999999.9;
             while (!needToStop)
             {
                 // run epoch of learning procedure
                 double error = teacher.RunEpoch(input, output);
                 // check error value to see if we need to stop
-                if (error < 0.0001)
+                if (Math.Abs(prevError - error) < 0.000001 || epochsHundreds == 100)
+                {
                     needToStop = true;
+                    watch.Stop();
+                    var elapsedMs = watch.ElapsedMilliseconds;
+                    Console.WriteLine(2 + ", " + RESTRICTIONS + " Stop at: " + epochsHundreds + "" + epochs
+                        + " Error: " + error + " Time: " + elapsedMs / 1000 + "s");
+                }
+                if (epochs == 100)
+                {
+                    epochsHundreds++;
+                    epochs = 0;
+                }
+                prevError = error;
+                epochs++;
+            }
+            return network;
+        }
+
+        public static double[][] ComputeNetwork(double[][] input, ActivationNetwork ANN)
+        {
+            double[][] output = new double[input.Length][];
+            int i = 0;
+            foreach(double[] d in input)
+            {
+                output[i] = ANN.Compute(d);
+                i++;
+            }
+            return output;
+        }
+
+        public static void NetworkComparison(double[][] calculatedOutput, double[][] originalOutput)
+        {
+            int nrOfOutputs = calculatedOutput.Length;
+            if (nrOfOutputs != originalOutput.Length)
+            {
+                Console.WriteLine("Size doesn't match!");
+            }
+            else
+            {
+                double error = 0;
+                int correct = 0;
+                for (int i = 0; i < nrOfOutputs; i++)
+                {
+                    int correctRes = 0;
+                    for (int j = 0; j < RESTRICTIONS - 1; j++)
+                    {
+                        double resError = Math.Abs(calculatedOutput[i][j] - originalOutput[i][j]);
+                        if(resError < 0.9)
+                        {
+                            correctRes++;
+                        }
+                        error += resError;
+                    }
+                    if(correctRes == RESTRICTIONS)
+                    {
+                        correct++;
+                    }
+                }
+                error = error / nrOfOutputs;
+                Console.WriteLine("Nr of correct arcs: " + correct + " of " + nrOfOutputs + 
+                    " Error of network: " + error);
             }
         }
 
         //Interface stuff
         public static string[] dataSets = { "Norrkoping", "Linkoping", "Nykoping" };
-        public static void DisplayData()
+        public static int DisplayData()
         {
-            Console.WriteLine("Choose data set to load:");
-            for (int i = 0; i < dataSets.Length; i++)
-            {
-                Console.WriteLine(i + 1 + ". " + dataSets[i]);
-            }
-            Console.WriteLine("Norrkoping was selected");
+            Console.WriteLine("Choose option: \n" +
+                "1. Load road data\n" +
+                "2. Train ANN\n" +
+                "3. Save ANN\n" +
+                "4. Load ANN\n" +
+                "5. Evaluate network\n" +
+                "6. Exit");
+            return Convert.ToInt32(Console.ReadLine());
         }
 
         /*public static void TestCurve()

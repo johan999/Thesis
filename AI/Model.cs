@@ -1,6 +1,5 @@
 ﻿using Newtonsoft.Json;
 using System.Collections.Generic;
-using System.IO;
 
 namespace AI
 {
@@ -16,7 +15,7 @@ namespace AI
         public static Network_DTO LoadJson(string name)
         {
             //File path
-            string jsonText = System.IO.File.ReadAllText(Path.Combine("Data/", name));
+            string jsonText = System.IO.File.ReadAllText(name);
 
             //Deserialize json
             Network_DTO network = JsonConvert.DeserializeObject<Network_DTO>(jsonText);

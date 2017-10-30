@@ -6,8 +6,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AForge.Neuro" Version="2.2.5" />
+    <PackageReference Include="Accord.Neuro" Version="3.8.0" />
+    <PackageReference Include="Accord.Statistics" Version="3.8.0" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="ANN\" />
   </ItemGroup>
 
 </Project>
