@@ -134,5 +134,77 @@ namespace AI
         {
             return !Double.IsNaN(value) && !Double.IsInfinity(value);
         }
+
+        //Input should return:        
+        //Sinuosity
+        public static double[][] CreateInputList(Network_DTO network)
+        {
+            int arcsWithCurves = 0;
+            double max = 0;
+            double total = 0;
+
+
+            double[][] inputList = new double[network.arcs.Count()][];
+            int listNr = 0;
+            foreach (Arc_DTO arc in network.arcs)
+            {
+                double birdDist =
+                    CalculateDistanceInKilometers(
+                        arc.locations.First(), arc.locations.Last());
+                double totalDist =
+                    CalculateDistanceInKilometers(
+                        arc.locations);
+                double curves = 0.0;
+                //If birdDist != totalDist => atleast one curve in the arc
+                if (birdDist != totalDist)
+                {
+                    arcsWithCurves++;
+                    curves = EvaluateCurves(arc.locations);
+                    if (curves > max)
+                        max = curves;
+                    total += curves;
+                }
+
+                
+                    
+                inputList[listNr] = new double[] { curves, 50 };
+                listNr++;
+            }
+            Console.WriteLine("Arcs with curves: " + arcsWithCurves + " Max: " + max +
+                " Mean: " + total / network.arcs.Count());
+            return inputList;
+        }
+
+        //Creates an output list. 
+        //For each arc a double[] is created and placed in the list.
+        //The array length is the number of possible restrictions
+        //If an arc has a restriction, the position in the array corresponding to the same 
+        //type number of a restriction - 1, gets the value 1, the rest 0. e.g {0, 1, 0, 0} type 2
+        public static double[][] CreateOutputList(Network_DTO network)
+        {
+            int nrOfRestrictions = network.restrictions.Count();
+            double[][] outputList = new double[network.arcs.Count()][];
+            int listNr = 0;
+
+            foreach (Arc_DTO arc in network.arcs)
+            {
+                double[] restrictionOutput = new double[nrOfRestrictions];
+                if (nrOfRestrictions != 0)
+                {
+                    foreach (string restrictionID in arc.arcRestrictionIds)
+                    {
+                        int restrictionNr = network.restrictions.Where(a => a.id == restrictionID).First().type - 1;
+                        restrictionOutput[restrictionNr] = 1.0;
+                    }
+                    outputList[listNr] = restrictionOutput;
+                }
+                else
+                {
+                    outputList[listNr] = restrictionOutput;
+                }
+                listNr++;
+            }
+            return outputList;
+        }
     }
 }
