@@ -64,11 +64,17 @@ namespace AI
     {
         public double lat { get; set; }
         public double lon { get; set; }
-    }   
-
+    }
 
     public class Test_Location_DTO
     {
         public IEnumerable<Location_DTO> locations { get; set; }
+    }
+
+
+    public class Speed_DTO
+    {
+        public int speed { get; set; }
+        public string refLocation { get; set; }
     }
 }
