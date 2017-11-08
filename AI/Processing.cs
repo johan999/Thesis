@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Xml.Linq;
 
 namespace AI
 {
@@ -63,7 +64,7 @@ namespace AI
                 double hypotenuse = CalculateDistanceInKilometers(t.p2, t.p0);
                 double frontDist = CalculateDistanceInKilometers(t.p1, t.p2);
                 double backDist = CalculateDistanceInKilometers(t.p1, t.p0);
-             
+
                 //Calculates central angle for a triangle
                 double angle = Math.PI;
                 if (frontDist + backDist - hypotenuse > 0.001)
@@ -73,19 +74,19 @@ namespace AI
                         / (2.0 * frontDist * backDist));
                     if (!HasValue(angle))
                     {
-                        Console.WriteLine("NaN! H: " + hypotenuse + " f: " + frontDist + " b: " + backDist + 
-                            "\n P0: " + t.p0.lat + " " + t.p0.lon + 
-                            " P1: " + t.p1.lat + " " + t.p1.lon + 
+                        Console.WriteLine("NaN! H: " + hypotenuse + " f: " + frontDist + " b: " + backDist +
+                            "\n P0: " + t.p0.lat + " " + t.p0.lon +
+                            " P1: " + t.p1.lat + " " + t.p1.lon +
                             " P2: " + t.p2.lat + " " + t.p2.lon);
                         angle = 0.0;
                     }
-                    if(angle < 0)
+                    if (angle < 0)
                     {
                         Console.WriteLine("Negative angle! H: " + hypotenuse + " f: " + frontDist
                             + " b: " + backDist + " a: " + angle);
                     }
                 }
-               
+
                 //PI - angle, to get the vehicle displacement angle instead of curve angle
                 angle = Math.PI - angle;
 
@@ -120,10 +121,10 @@ namespace AI
                     double[] item = { curveAngle, curveLength };
                     arcCurves.Add(item);
                 }
-                tracker++;                
+                tracker++;
             }
             double final = 0.0;
-            foreach(double[] c in arcCurves)
+            foreach (double[] c in arcCurves)
             {
                 final += c[0] / c[1];
             }
@@ -165,8 +166,8 @@ namespace AI
                     total += curves;
                 }
 
-                
-                    
+
+
                 inputList[listNr] = new double[] { curves, 50 };
                 listNr++;
             }
@@ -205,6 +206,85 @@ namespace AI
                 listNr++;
             }
             return outputList;
+        }
+
+        public static void LoadXML(string name)
+        {
+            XDocument doc = XDocument.Load(name);
+
+            //Get node locations
+            var arc = doc
+                .Elements("GI")
+                .Elements("dataset")
+                .Elements("NW_RefLink")
+                .ToDictionary(a => a.Attribute("uuid").Value.ToString());
+
+            //Get speeds for arcs
+            var speeds = doc
+                .Elements("GI")
+                .Elements("dataset")
+                .Elements("FI_ChangedFeatureWithHistory");
+
+
+            List<Speed_DTO> list = new List<Speed_DTO>();
+
+            foreach (var a in speeds)
+            {
+                Speed_DTO speedOfLocation = new Speed_DTO();
+
+                //Reference to road geometry
+                var locationRef = a.Descendants()
+                    .Where(n => n.Name == "locationInstance")
+                    .FirstOrDefault().Attribute("uuidref").Value;
+
+                //Speed of the geometry
+                string speed = a.Descendants()
+                    .Where(n => n.Name == "number")
+                    .FirstOrDefault().Value;
+
+                if (locationRef != null && speed != null)
+                {
+                    speedOfLocation.refLocation = locationRef;
+                    speedOfLocation.speed = Convert.ToInt32(speed);
+                }
+
+                list.Add(speedOfLocation);
+            }
+
+            int match = 0;
+            for (int i = 0; i < list.Count(); i++)
+            {
+                XElement value;
+                if (arc.TryGetValue(list[i].refLocation, out value))
+                {
+                    IEnumerable<XElement> nodes = value.Descendants("controlPoint");
+                    Console.WriteLine("\n");
+                    foreach (var c in nodes)
+                    {
+                        Console.WriteLine(c);
+                        //I geometrin leta reda på en nod, lägg till och omvandla
+                        //koordinaterna, fortsätt för varje nod. 
+                        //Eller räcker det med första och sista?
+                        //.geometry
+                        //.GM_Curve
+                        //.segment
+                        //.GM_LineString
+                        //.controlPoint
+                        //.column
+                        //An element includes
+                        //.direct
+                        //.coordinate
+                        //.number x 3
+
+                    }
+
+                }
+                else
+                {
+                    Console.WriteLine("No such key: " + list[i].refLocation);
+                }
+            }
+            Console.WriteLine("Match: " + match + " of " + list.Count());
         }
     }
 }

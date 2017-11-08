@@ -18,13 +18,13 @@ namespace AI
             return output;
         }
 
-        public static ActivationNetwork CreateANN(double[][] input, double[][] output)
+        public static ActivationNetwork CreateANN(double[][] input, double[][] output, double learningRate)
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
             int nrOfOutputs = output[0].Length;
             int nrOfInputs = input[0].Length;
 
-            int[] layers = { 4, 2, nrOfOutputs }; //Neurons per layer
+            int[] layers = { 4, 4, nrOfOutputs }; //Neurons per layer
 
             ActivationNetwork network = new ActivationNetwork(
                 new SigmoidFunction(),  //Activation function
@@ -32,7 +32,7 @@ namespace AI
                 layers);                //Hidden layers + output
             
             BackPropagationLearning teacher = new BackPropagationLearning(network);
-            teacher.LearningRate = 0.5;
+            teacher.LearningRate = learningRate;
             bool needToStop = false;
 
             int epochs = 0;

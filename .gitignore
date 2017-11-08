@@ -259,3 +259,6 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
+/AI/Data/Norrkoping_hastighet.xml
+/AI/ANN/nkpg.1.json
+/AI/Test/test.json

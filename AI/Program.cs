@@ -1,6 +1,10 @@
 ﻿using Accord.Neuro;
 using System;
 using System.IO;
+using System.Xml.Linq;
+using System.Collections.Generic;
+using System.Linq;
+using System.Xml;
 
 namespace AI
 {
@@ -16,7 +20,7 @@ namespace AI
             double[][] outputList = null;
             ActivationNetwork ANN = null;
 
-            while (choice != 6) {
+            while (choice != 7) {
                 choice = DisplayData();
                 switch (choice)
                 {
@@ -43,7 +47,10 @@ namespace AI
                             Console.WriteLine("Did not load or empty network");
                             break;
                         }
-                        ANN = NeuralNetwork.CreateANN(inputList, outputList);
+                        Console.WriteLine("Learning rate?[0,0 - 1,0]");
+                        double learningRate = Convert.ToDouble(Console.ReadLine());
+
+                        ANN = NeuralNetwork.CreateANN(inputList, outputList, learningRate);
                         break;
                     case 3:
                         if (ANN == null)
@@ -96,13 +103,18 @@ namespace AI
                         }
                         break;
                     case 6:
-                        Console.WriteLine("Bye...");
+                        Console.WriteLine("Load XML");
+
+                        Processing.LoadXML("Data/Norrkoping_hastighet.xml");
+
                         break;
                     case 7:
-                        Console.WriteLine(ANN.Compute(new double[]{1.40 , 50})[0]);
+                        Console.WriteLine("Bye...");
+                        break;
+                    case 8: //Secret
+                        //Console.WriteLine(speed.NextNode);
                         break;
                 }
-                Console.WriteLine();
             }
         }
 
@@ -116,7 +128,8 @@ namespace AI
                 "3. Save ANN\n" +
                 "4. Load ANN\n" +
                 "5. Evaluate network\n" +
-                "6. Exit");
+                "6. Load XML\n" +
+                "7. Exit");
             return Convert.ToInt32(Console.ReadLine());
         }
 
