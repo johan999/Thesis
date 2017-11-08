@@ -228,63 +228,80 @@ namespace AI
 
             List<Speed_DTO> list = new List<Speed_DTO>();
 
-            foreach (var a in speeds)
+            foreach (var velocity in speeds)
             {
-                Speed_DTO speedOfLocation = new Speed_DTO();
+                Speed_DTO speedArc = new Speed_DTO();
 
                 //Reference to road geometry
-                var locationRef = a.Descendants()
+                var locationRef = velocity.Descendants()
                     .Where(n => n.Name == "locationInstance")
                     .FirstOrDefault().Attribute("uuidref").Value;
 
-                //Speed of the geometry
-                string speed = a.Descendants()
-                    .Where(n => n.Name == "number")
-                    .FirstOrDefault().Value;
-
-                if (locationRef != null && speed != null)
-                {
-                    speedOfLocation.refLocation = locationRef;
-                    speedOfLocation.speed = Convert.ToInt32(speed);
-                }
-
-                list.Add(speedOfLocation);
-            }
-
-            int match = 0;
-            for (int i = 0; i < list.Count(); i++)
-            {
                 XElement value;
-                if (arc.TryGetValue(list[i].refLocation, out value))
+                if (arc.TryGetValue(locationRef, out value))
                 {
-                    IEnumerable<XElement> nodes = value.Descendants("controlPoint");
-                    Console.WriteLine("\n");
-                    foreach (var c in nodes)
+                    //Closest mutual parent
+                    //<direct>
+                    //    <coordinate>
+                    //    <dimension>
+                    //</direct>
+                    var nodes = value
+                        .Descendants("controlPoint")
+                        .Elements("column")
+                        .Elements("direct");
+
+                    //Child node "dimension"
+                    var dim = nodes.Elements("dimension").First().Value;
+                    if (dim == "3" || dim == "2")
                     {
-                        Console.WriteLine(c);
-                        //I geometrin leta reda på en nod, lägg till och omvandla
-                        //koordinaterna, fortsätt för varje nod. 
-                        //Eller räcker det med första och sista?
-                        //.geometry
-                        //.GM_Curve
-                        //.segment
-                        //.GM_LineString
-                        //.controlPoint
-                        //.column
-                        //An element includes
-                        //.direct
-                        //.coordinate
-                        //.number x 3
+                        //Child node "coordinate"
+                        var start = nodes.Elements("coordinate").First().Elements();
+                        var stop = nodes.Elements("coordinate").Last().Elements();
 
+                        int p = 0;
+                        string[] sStart = new string[3];
+                        foreach (var a in start)
+                        {
+                            sStart[p] = a.Value;
+                            p++;
+                        }
+
+                        p = 0;
+                        string[] sStop = new string[3];
+                        foreach (var a in stop)
+                        {
+                            sStop[p] = a.Value;
+                            p++;
+                        }
+
+                        speedArc.startPos = sStart;
+                        speedArc.endPos = sStop;
                     }
-
                 }
                 else
                 {
-                    Console.WriteLine("No such key: " + list[i].refLocation);
+                    Console.WriteLine("No such key: " + locationRef);
+                    continue;
                 }
+
+                //Speed of the geometry
+                string speed = velocity.Descendants()
+                    .Where(n => n.Name == "number")
+                    .FirstOrDefault().Value;
+
+                if (speed != null)
+                {
+                    speedArc.speed = Convert.ToInt32(speed);
+                }
+
+
+                Console.WriteLine(speedArc.speed);
+                for (int i = 0; i < speedArc.startPos.Length; i++)
+                {
+                    Console.WriteLine("Start: " + speedArc.startPos[i] + " End: " + speedArc.endPos[i]);
+                }
+                list.Add(speedArc);
             }
-            Console.WriteLine("Match: " + match + " of " + list.Count());
         }
     }
 }

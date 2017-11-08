@@ -26,7 +26,7 @@ namespace AI
 
     //Restriction for an arc
     public class ArcRestriction_DTO
-    {       
+    {
         public string id { get; set; }  //Restriction id
         public IEnumerable<int> grades { get; set; }    //Grades which the restriction affect
         public int type { get; set; }           //Restriction number
@@ -54,7 +54,7 @@ namespace AI
         public string id { get; set; }              //Arc id
         public string fromNodeId { get; set; }      //Start node
         public string toNodeId { get; set; }        //End node
-        public double speed { get; set; }       
+        public double speed { get; set; }
         public IEnumerable<string> arcRestrictionIds { get; set; }  //List of arc restrictions
         public IEnumerable<Location_DTO> locations { get; set; }    //Node locations, lat, lon
     }
@@ -75,6 +75,9 @@ namespace AI
     public class Speed_DTO
     {
         public int speed { get; set; }
-        public string refLocation { get; set; }
+        public string[] startPos { get; set; }
+        public string[] endPos { get; set; }
+
+        //public string refLocation { get; set; }
     }
 }
