@@ -2,7 +2,6 @@ using System;
 
 namespace AI
 {
-
     public class Point
     {
         public Point()
@@ -10,7 +9,6 @@ namespace AI
             X = 0;
             Y = 0;
         }
-
 
         public Point(double x, double y)
         {
@@ -28,37 +26,37 @@ namespace AI
         /// <summary>
         /// Flattening of the ellipsoid
         /// </summary>
-        public const double Flattening = 298.257222101;
+        public const double Flattening = 1 / 298.257222101;
 
         /// <summary>
         /// Longitude of the central meridian
         /// </summary>
-        public const double CentralMeridian = 16.5;
+        public const double CentralMeridian = 16.5 * Math.PI / 180;
 
         /// <summary>
         /// Scale factor along the central meridian
         /// </summary>
-        #region Scale
-        public double Scale
-        {
-            get
-            {
-                return _Scale;
-            }
-            set
-            {
-                _Scale = value;
-            }
-        }
-        private double _Scale = 1d;
-        #endregion
+        //<#region Scale
+        public static double Scale = 1.0;
+        //{
+        //    get
+        //    {
+        //        return _Scale;
+        //    }
+        //    set
+        //    {
+        //        _Scale = value;
+        //    }
+        //}
+        //private static double _Scale = 1d;
+        //#endregion
 
 
         public const double FalseNorthing = 0;
         public const double FalseEasting = 150000;
 
-        // Converts a point in local projection koordinates to a longitude/lattitude point 
-        public Point InverseProject(Point p)
+        // Converts a point in local projection coordinates to a longitude/lattitude point 
+        public static Point InverseProject(Point p)
         {
             var x = p.Y;
             var y = p.X;
@@ -81,10 +79,10 @@ namespace AI
             var d3 = (17d / 480d) * n3 - (37d / 840d) * n2 * n2;
             var d4 = (4397d / 161280d) * n2 * n2;
 
-            var Ep = E 
-                - d1 * Math.Sin(2 * E) * Math.Cosh(2 * nj) 
-                - d2 * Math.Sin(4 * E) * Math.Cosh(4 * nj) 
-                - d3 * Math.Sin(6 * E) * Math.Cosh(6 * nj) 
+            var Ep = E
+                - d1 * Math.Sin(2 * E) * Math.Cosh(2 * nj)
+                - d2 * Math.Sin(4 * E) * Math.Cosh(4 * nj)
+                - d3 * Math.Sin(6 * E) * Math.Cosh(6 * nj)
                 - d4 * Math.Sin(8 * E) * Math.Cosh(8 * nj);
 
             var njp = nj
@@ -103,14 +101,14 @@ namespace AI
 
             var lon = CentralMeridian + lonDiff;
             var sin_latC = Math.Sin(latC);
-            var sin_latC2 = sin_latC*sin_latC;
+            var sin_latC2 = sin_latC * sin_latC;
             var lat = latC + sin_latC * Math.Cos(latC) * (A + B * sin_latC2 + C * sin_latC2 * sin_latC2 + D * sin_latC2 * sin_latC2 * sin_latC2);
 
             var xkoord = Math.Round(180d * lon / Math.PI, 7);
             var ykoord = Math.Round(180d * lat / Math.PI, 7);
 
             // check if inital coordinate is 0
-            if (p.X == 0 )
+            if (p.X == 0)
             {
                 xkoord = 0;
             }
@@ -124,10 +122,10 @@ namespace AI
         }
 
         // Converts a longitude/lattitude point to a point in local projection koordinates
-        public Point Project(Point p)
+        public static Point Project(Point p)
         {
             // check if 0
-            if ( p.X == 0 || p.Y == 0 )
+            if (p.X == 0 || p.Y == 0)
             {
                 return p;
             }

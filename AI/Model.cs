@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AI
 {
@@ -19,6 +20,11 @@ namespace AI
 
             //Deserialize json
             Network_DTO network = JsonConvert.DeserializeObject<Network_DTO>(jsonText);
+            foreach (var arc in network.arcs)
+            {
+                arc.start = arc.locations.First();
+                arc.stop = arc.locations.Last();
+            }
 
             return network;
         }
@@ -57,6 +63,26 @@ namespace AI
         public double speed { get; set; }
         public IEnumerable<string> arcRestrictionIds { get; set; }  //List of arc restrictions
         public IEnumerable<Location_DTO> locations { get; set; }    //Node locations, lat, lon
+
+        //After processing
+        public Location_DTO start;
+        public Location_DTO stop;
+
+
+        //Arc_DTO(int roadclass, ArcRoadType roadtype, 
+        //    string id, string fromNodeId, string toNodeId, 
+        //    double speed, IEnumerable<string> arcRestrictionIds, 
+        //    IEnumerable<Location_DTO> locations)
+        //{
+        //    this.roadClass = roadClass;
+        //    this.roadType = roadType;
+        //    this.id = id;
+        //    this.fromNodeId = fromNodeId;
+        //    this.toNodeId = toNodeId;
+        //    this.speed = speed;
+        //    this.arcRestrictionIds = arcRestrictionIds;
+        //    this.locations = locations;
+        //}
     }
 
     //Node location
@@ -71,13 +97,10 @@ namespace AI
         public IEnumerable<Location_DTO> locations { get; set; }
     }
 
-
-    public class Speed_DTO
+    public class Speed
     {
         public int speed { get; set; }
         public string[] startPos { get; set; }
         public string[] endPos { get; set; }
-
-        //public string refLocation { get; set; }
     }
 }

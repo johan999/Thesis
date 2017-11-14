@@ -30,7 +30,7 @@ namespace AI
                 new SigmoidFunction(),  //Activation function
                 2,                      //Input
                 layers);                //Hidden layers + output
-            
+
             BackPropagationLearning teacher = new BackPropagationLearning(network);
             teacher.LearningRate = learningRate;
             bool needToStop = false;
@@ -40,16 +40,16 @@ namespace AI
             while (!needToStop)
             {
                 double error = teacher.RunEpoch(input, output);
-                
+
                 if (Math.Abs(prevError - error) < 0.0000001 || epochs == 10000)
                 {
                     needToStop = true;
                     watch.Stop();
                     var elapsedMs = watch.ElapsedMilliseconds;
-                    Console.WriteLine("\n" + 2 + ", " + nrOfOutputs + " Stop at: " + epochs + 
+                    Console.WriteLine("\n" + 2 + ", " + nrOfOutputs + " Stop at: " + epochs +
                         " Error: " + error + " Time: " + elapsedMs / 1000 + "s");
                 }
-                if(epochs % 1000 == 0 && epochs != 0)
+                if (epochs % 1000 == 0 && epochs != 0)
                 {
                     Console.Write(".");
                 }
@@ -81,7 +81,7 @@ namespace AI
                         {
                             correctRes++;
                         }
-                        
+
                         error += resError;
                     }
                     if (correctRes == restrictionsLength)
@@ -89,7 +89,7 @@ namespace AI
 
                         correct++;
                     }
-                   
+
                 }
                 error = error / nrOfOutputs;
                 Console.WriteLine("Nr of correct arcs: " + correct + " of " + nrOfOutputs +

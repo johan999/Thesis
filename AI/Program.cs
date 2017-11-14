@@ -5,6 +5,7 @@ using System.Xml.Linq;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml;
+using MightyLittleGeodesy.Positions;
 
 namespace AI
 {
@@ -20,7 +21,8 @@ namespace AI
             double[][] outputList = null;
             ActivationNetwork ANN = null;
 
-            while (choice != 7) {
+            while (choice != 7)
+            {
                 choice = DisplayData();
                 switch (choice)
                 {
@@ -33,16 +35,16 @@ namespace AI
                             Console.WriteLine(count + ". " + s);
                             count++;
                         }
-                        
+
                         roadNetwork = Network_DTO.LoadJson(files[
-                            Convert.ToInt32(Console.ReadLine())-1]);
+                            Convert.ToInt32(Console.ReadLine()) - 1]);
 
                         inputList = Processing.CreateInputList(roadNetwork);
                         outputList = Processing.CreateOutputList(roadNetwork);
 
                         break;
                     case 2:
-                        if(roadNetwork == null)
+                        if (roadNetwork == null)
                         {
                             Console.WriteLine("Did not load or empty network");
                             break;
@@ -72,7 +74,7 @@ namespace AI
                             Console.WriteLine(count + ". " + s);
                             count++;
                         }
-                        ANN = (ActivationNetwork)Network.Load(AIs[Convert.ToInt32(Console.ReadLine()) - 1]);                     
+                        ANN = (ActivationNetwork)Network.Load(AIs[Convert.ToInt32(Console.ReadLine()) - 1]);
                         if (ANN == null)
                         {
                             Console.WriteLine("Could not load network");
@@ -86,12 +88,12 @@ namespace AI
                             double[][] output = NeuralNetwork.ComputeNetwork(inputList, ANN);
                             NeuralNetwork.NetworkComparison(output, outputList);
                         }
-                        if(inputList == null)
+                        if (inputList == null)
                         {
                             Console.WriteLine("Missing input");
                             break;
                         }
-                        if(ANN == null)
+                        if (ANN == null)
                         {
                             Console.WriteLine("Missing ANN");
                             break;
@@ -104,22 +106,25 @@ namespace AI
                         break;
                     case 6:
                         Console.WriteLine("Load XML");
-
-                        Processing.LoadXML("Data/Norrkoping_hastighet.xml");
+                        //Processing.LoadXML("Data/Nkpg_hastighet_RT90_00.xml");
+                        NVDBProcessing.LoadXML("Data/Norrkoping_hastighet.xml");
 
                         break;
                     case 7:
                         Console.WriteLine("Bye...");
                         break;
                     case 8: //Secret
-                        //Console.WriteLine(speed.NextNode);
+                        SWEREF99Position swePos = new SWEREF99Position(6496020, 570037);
+                        WGS84Position wgsPos = swePos.ToWGS84();
+
+                        Console.WriteLine(wgsPos.Latitude);
                         break;
                 }
             }
         }
 
         //Interface stuff
-        public static string[] dataSets = { "Norrkoping", "Linkoping", "Nykoping" };
+        public string[] dataSets = { "Norrkoping", "Linkoping", "Nykoping" };
         public static int DisplayData()
         {
             Console.WriteLine("Choose option: \n" +
@@ -147,6 +152,6 @@ namespace AI
                 Console.WriteLine("Angle: " + d[0] + ", Length: " + d[1]);
             }
             
-        } */      
+        } */
     }
 }

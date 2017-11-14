@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26730.16
+VisualStudioVersion = 15.0.27004.2008
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AI", "AI\AI.csproj", "{0F3B9423-ECA9-4F65-985A-F309B222696B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AI", "AI\AI.csproj", "{0F3B9423-ECA9-4F65-985A-F309B222696B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

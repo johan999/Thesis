@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Xml.Linq;
 
 namespace AI
 {
@@ -166,8 +165,6 @@ namespace AI
                     total += curves;
                 }
 
-
-
                 inputList[listNr] = new double[] { curves, 50 };
                 listNr++;
             }
@@ -207,101 +204,6 @@ namespace AI
             }
             return outputList;
         }
-
-        public static void LoadXML(string name)
-        {
-            XDocument doc = XDocument.Load(name);
-
-            //Get node locations
-            var arc = doc
-                .Elements("GI")
-                .Elements("dataset")
-                .Elements("NW_RefLink")
-                .ToDictionary(a => a.Attribute("uuid").Value.ToString());
-
-            //Get speeds for arcs
-            var speeds = doc
-                .Elements("GI")
-                .Elements("dataset")
-                .Elements("FI_ChangedFeatureWithHistory");
-
-
-            List<Speed_DTO> list = new List<Speed_DTO>();
-
-            foreach (var velocity in speeds)
-            {
-                Speed_DTO speedArc = new Speed_DTO();
-
-                //Reference to road geometry
-                var locationRef = velocity.Descendants()
-                    .Where(n => n.Name == "locationInstance")
-                    .FirstOrDefault().Attribute("uuidref").Value;
-
-                XElement value;
-                if (arc.TryGetValue(locationRef, out value))
-                {
-                    //Closest mutual parent
-                    //<direct>
-                    //    <coordinate>
-                    //    <dimension>
-                    //</direct>
-                    var nodes = value
-                        .Descendants("controlPoint")
-                        .Elements("column")
-                        .Elements("direct");
-
-                    //Child node "dimension"
-                    var dim = nodes.Elements("dimension").First().Value;
-                    if (dim == "3" || dim == "2")
-                    {
-                        //Child node "coordinate"
-                        var start = nodes.Elements("coordinate").First().Elements();
-                        var stop = nodes.Elements("coordinate").Last().Elements();
-
-                        int p = 0;
-                        string[] sStart = new string[3];
-                        foreach (var a in start)
-                        {
-                            sStart[p] = a.Value;
-                            p++;
-                        }
-
-                        p = 0;
-                        string[] sStop = new string[3];
-                        foreach (var a in stop)
-                        {
-                            sStop[p] = a.Value;
-                            p++;
-                        }
-
-                        speedArc.startPos = sStart;
-                        speedArc.endPos = sStop;
-                    }
-                }
-                else
-                {
-                    Console.WriteLine("No such key: " + locationRef);
-                    continue;
-                }
-
-                //Speed of the geometry
-                string speed = velocity.Descendants()
-                    .Where(n => n.Name == "number")
-                    .FirstOrDefault().Value;
-
-                if (speed != null)
-                {
-                    speedArc.speed = Convert.ToInt32(speed);
-                }
-
-
-                Console.WriteLine(speedArc.speed);
-                for (int i = 0; i < speedArc.startPos.Length; i++)
-                {
-                    Console.WriteLine("Start: " + speedArc.startPos[i] + " End: " + speedArc.endPos[i]);
-                }
-                list.Add(speedArc);
-            }
-        }
     }
 }
+
