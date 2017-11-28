@@ -1,11 +1,9 @@
 ﻿using Accord.Neuro;
+using Newtonsoft.Json;
 using System;
-using System.IO;
-using System.Xml.Linq;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Xml;
-using MightyLittleGeodesy.Positions;
 
 namespace AI
 {
@@ -16,14 +14,19 @@ namespace AI
         static void Main(string[] args)
         {
             //Empty variables
-            Network_DTO roadNetwork = null;
+            Network_DTO allNetworks = new Network_DTO();
             double[][] inputList = null;
             double[][] outputList = null;
             ActivationNetwork ANN = null;
+            IEnumerable<Arc_DTO> roadNetwork = null;
+            IEnumerable<Arc_DTO> listOfArcSpeed = null;
+            List<Arc_DTO> matchingNetwork = null;
+
 
             while (choice != 7)
             {
-                choice = DisplayData();
+                Display menu = new Display();
+                choice = menu.Menu();
                 switch (choice)
                 {
                     case 1:
@@ -36,15 +39,18 @@ namespace AI
                             count++;
                         }
 
-                        roadNetwork = Network_DTO.LoadJson(files[
+                        allNetworks = allNetworks.LoadJson(files[
                             Convert.ToInt32(Console.ReadLine()) - 1]);
 
-                        inputList = Processing.CreateInputList(roadNetwork);
-                        outputList = Processing.CreateOutputList(roadNetwork);
+                        roadNetwork = allNetworks.GetDrivingRoads(allNetworks);
 
+                        //inputList = Processing.CreateInputList(allNetworks);
+                        //1outputList = Processing.CreateOutputList(allNetworks);
+
+                        Console.WriteLine(roadNetwork.Where(n => n.arcRestrictionIds.Any()).Count());
                         break;
                     case 2:
-                        if (roadNetwork == null)
+                        if (allNetworks == null)
                         {
                             Console.WriteLine("Did not load or empty network");
                             break;
@@ -105,37 +111,43 @@ namespace AI
                         }
                         break;
                     case 6:
-                        Console.WriteLine("Load XML");
-                        //Processing.LoadXML("Data/Nkpg_hastighet_RT90_00.xml");
-                        NVDBProcessing.LoadXML("Data/Norrkoping_hastighet.xml");
+                        Console.WriteLine("Add data from XML");
+                        NVDBProcessing xmlProcessor = new NVDBProcessing();
 
+                        listOfArcSpeed = xmlProcessor.LoadXML("Data/Norrkoping_hastighet.xml").ToList();
+
+                        matchingNetwork = xmlProcessor.FindArc(listOfArcSpeed, roadNetwork).ToList();
+
+                        //var outfilteredNetwork = roadNetwork.Except(matchingNetwork);
+                        //var matchingNetwork2 = xmlProcessor.FindSmallArcs(listOfArcSpeed, outfilteredNetwork);
+
+                        Console.WriteLine("Geometry: " + roadNetwork.Count() +
+                            " Speeds: " + listOfArcSpeed.Count() +
+                            " Matches: " + matchingNetwork.Count());
+                        //Console.WriteLine(distinctNetwork.Where(n => n.arcRestrictionIds.Any()).Count());
                         break;
                     case 7:
                         Console.WriteLine("Bye...");
                         break;
                     case 8: //Secret
-                        SWEREF99Position swePos = new SWEREF99Position(6496020, 570037);
-                        WGS84Position wgsPos = swePos.ToWGS84();
 
-                        Console.WriteLine(wgsPos.Latitude);
+                        var filteredRoad = roadNetwork.Except(matchingNetwork.Distinct()).ToList();
+                        var roadList = JsonConvert.SerializeObject(filteredRoad);
+                        File.WriteAllText(@"C:\Arc_import\road.json", roadList);
+
+                        var filteredSpeed = listOfArcSpeed.ToList();
+                        var speedList = JsonConvert.SerializeObject(filteredSpeed);
+                        File.WriteAllText(@"C:\Arc_import\speed.json", speedList);
+
+                        var matchList = JsonConvert.SerializeObject(matchingNetwork);
+                        File.WriteAllText(@"C:\Arc_import\match.json", matchList);
+
+                        Console.WriteLine("FR: " + filteredRoad.Count +
+                            " FS: " + filteredSpeed.Count +
+                            " M: " + matchingNetwork.Count);
                         break;
                 }
             }
-        }
-
-        //Interface stuff
-        public string[] dataSets = { "Norrkoping", "Linkoping", "Nykoping" };
-        public static int DisplayData()
-        {
-            Console.WriteLine("Choose option: \n" +
-                "1. Load road data\n" +
-                "2. Train ANN\n" +
-                "3. Save ANN\n" +
-                "4. Load ANN\n" +
-                "5. Evaluate network\n" +
-                "6. Load XML\n" +
-                "7. Exit");
-            return Convert.ToInt32(Console.ReadLine());
         }
 
         /*public static void TestCurve()
@@ -153,5 +165,21 @@ namespace AI
             }
             
         } */
+    }
+    class Display
+    {
+        //Interface stuff
+        public int Menu()
+        {
+            Console.WriteLine("Choose option: \n" +
+                "1. Load road data\n" +
+                "2. Train ANN\n" +
+                "3. Save ANN\n" +
+                "4. Load ANN\n" +
+                "5. Evaluate network\n" +
+                "6. Load XML\n" +
+                "7. Exit");
+            return Convert.ToInt32(Console.ReadLine());
+        }
     }
 }

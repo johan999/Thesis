@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -13,20 +14,31 @@ namespace AI
         public IEnumerable<Node_DTO> nodes { get; set; }       //Nodes of the network        
 
         //Load a Json file into one network (Network_DTO)
-        public static Network_DTO LoadJson(string name)
+        public Network_DTO LoadJson(string name)
         {
             //File path
             string jsonText = System.IO.File.ReadAllText(name);
 
             //Deserialize json
             Network_DTO network = JsonConvert.DeserializeObject<Network_DTO>(jsonText);
-            foreach (var arc in network.arcs)
+
+            return network;
+        }
+
+        public IEnumerable<Arc_DTO> GetDrivingRoads(Network_DTO network)
+        {
+            //Get roads for driving
+            IEnumerable<Arc_DTO> roadArcs = network.arcs.Skip(1)
+                .Where(r => r.roadType == ArcRoadType.Driving).ToList();
+
+            //Add start and stop nodes as variables for easier comparison
+            foreach (Arc_DTO arc in roadArcs)
             {
+                arc.length = Processing.CalculateDistanceInKilometers(arc.locations);
                 arc.start = arc.locations.First();
                 arc.stop = arc.locations.Last();
             }
-
-            return network;
+            return roadArcs;
         }
     }
 
@@ -67,24 +79,8 @@ namespace AI
         //After processing
         public Location_DTO start;
         public Location_DTO stop;
-
-
-        //Arc_DTO(int roadclass, ArcRoadType roadtype, 
-        //    string id, string fromNodeId, string toNodeId, 
-        //    double speed, IEnumerable<string> arcRestrictionIds, 
-        //    IEnumerable<Location_DTO> locations)
-        //{
-        //    this.roadClass = roadClass;
-        //    this.roadType = roadType;
-        //    this.id = id;
-        //    this.fromNodeId = fromNodeId;
-        //    this.toNodeId = toNodeId;
-        //    this.speed = speed;
-        //    this.arcRestrictionIds = arcRestrictionIds;
-        //    this.locations = locations;
-        //}
+        public double length;
     }
-
     //Node location
     public class Location_DTO
     {

@@ -50,7 +50,7 @@ namespace AI
             var triangles =
                 locations
                 .Zip(locations.Skip(1), (p0, p1) => new { p0, p1 })
-                .Zip(locations.Skip(2), (i, p2) => new { i.p0, i.p1, p2 });
+                .Zip(locations.Skip(2), (i, p2) => new { i.p0, i.p1, p2 }).ToList();
 
             List<double[]> arcCurves = new List<double[]>();
             bool curve = false;
