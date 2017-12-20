@@ -45,7 +45,7 @@ namespace AI
                         roadNetwork = allNetworks.GetDrivingRoads(allNetworks);
 
                         //inputList = Processing.CreateInputList(allNetworks);
-                        //1outputList = Processing.CreateOutputList(allNetworks);
+                        //outputList = Processing.CreateOutputList(allNetworks);
 
                         Console.WriteLine(roadNetwork.Where(n => n.arcRestrictionIds.Any()).Count());
                         break;
@@ -114,9 +114,9 @@ namespace AI
                         Console.WriteLine("Add data from XML");
                         NVDBProcessing xmlProcessor = new NVDBProcessing();
 
-                        listOfArcSpeed = xmlProcessor.LoadXML("Data/Norrkoping_hastighet.xml").ToList();
-
-                        matchingNetwork = xmlProcessor.FindArc(listOfArcSpeed, roadNetwork).ToList();
+                        //listOfArcSpeed = xmlProcessor.LoadXML("Data/Norrkoping_hastighet.xml").ToList();
+                        var a = xmlProcessor.CreateNetworkFromXML("Data/Norrkoping_hastighet.xml");
+                        //matchingNetwork = xmlProcessor.FindArc(roadNetwork, listOfArcSpeed).ToList();
 
                         //var outfilteredNetwork = roadNetwork.Except(matchingNetwork);
                         //var matchingNetwork2 = xmlProcessor.FindSmallArcs(listOfArcSpeed, outfilteredNetwork);
@@ -132,7 +132,8 @@ namespace AI
                     case 8: //Secret
 
                         var filteredRoad = roadNetwork.Except(matchingNetwork.Distinct()).ToList();
-                        var roadList = JsonConvert.SerializeObject(filteredRoad);
+                        //var roadList = JsonConvert.SerializeObject(filteredRoad);
+                        var roadList = JsonConvert.SerializeObject(roadNetwork);
                         File.WriteAllText(@"C:\Arc_import\road.json", roadList);
 
                         var filteredSpeed = listOfArcSpeed.ToList();

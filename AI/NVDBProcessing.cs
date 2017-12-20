@@ -1,4 +1,5 @@
 ﻿using MightyLittleGeodesy.Positions;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -17,19 +18,68 @@ namespace AI
         class NvdbArcGeometry
         {
             public string id;
+            public double length;
             public IEnumerable<Location_DTO> locations;
         }
+        public class NvdbNodeInfo
+        {
+            public IEnumerable<string> refNodeParts;
+            public string ID;
+            public Location_DTO location;
+        }
 
-        public IEnumerable<Arc_DTO> LoadXML(string name)
+        public Network_DTO CreateNetworkFromXML(string name)
         {
             XDocument doc = XDocument.Load(name);
 
+            //Nodes
+            var nodeInfos = doc
+                .Descendants("NW_RefNode")
+                .Select(RN =>
+                {
+                    var id = RN
+                        .Attribute("uuid")
+                        .Value;
+
+                    var locations = RN
+                        .Descendants("coordinate")
+                        .Select(nr =>
+                        {
+                            var numbers = nr.Elements("Number").ToList();
+                            double X = double.Parse(numbers[0].Value, CultureInfo.InvariantCulture);
+                            double Y = double.Parse(numbers[1].Value, CultureInfo.InvariantCulture);
+
+                            SWEREF99Position swePos = new SWEREF99Position(X, Y);
+                            WGS84Position wgsPos = swePos.ToWGS84();
+
+                            return new Location_DTO()
+                            {
+                                lat = wgsPos.Latitude,
+                                lon = wgsPos.Longitude
+                            };
+                        });
+
+                    var refNodes = RN
+                        .Descendants("connectedPort")
+                        .Select(CP =>
+                        {
+                            return GetUntilOrEmpty(CP.Attribute("uuidref").Value);
+                        });
+
+                    return new NvdbNodeInfo()
+                    {
+                        refNodeParts = refNodes,
+                        ID = id,
+                        location = locations.First()
+                    };
+                });
+
+            //Arc
             var arcInfos = doc
                 .Descendants("FI_ChangedFeatureWithHistory")
                 .Select(FI =>
                 {
-                    var id =
-                        FI
+                    var id = FI
                         .Descendants("NW_LineExtent")
                         .First()
                         .Descendants("locationInstance")
@@ -37,9 +87,7 @@ namespace AI
                         .Attribute("uuidref")
                         .Value;
 
-                    var speed =
-                        int.Parse(
-                            FI
+                    var speed = int.Parse(FI
                             .Descendants("number")
                             .First()
                             .Value);
@@ -55,21 +103,18 @@ namespace AI
 
             var arcGeometry = doc
                 .Descendants("NW_RefLink")
-                .Select(NW =>
+                .Select(RL =>
                 {
-                    var id =
-                        NW
+                    var id = RL
                         .Attribute("uuid")
                         .Value;
 
-                    var length =
-                        NW
+                    var length = RL
                         .Descendants("length")
                         .First()
                         .Value;
 
-                    var locations =
-                         NW
+                    var locations = RL
                         .Descendants("coordinate")
                         .Select(nr =>
                         {
@@ -77,8 +122,6 @@ namespace AI
 
                             double X = double.Parse(numbers[0].Value, CultureInfo.InvariantCulture);
                             double Y = double.Parse(numbers[1].Value, CultureInfo.InvariantCulture);
-
-                            //GaussConformalProjection.
 
                             SWEREF99Position swePos = new SWEREF99Position(X, Y);
                             WGS84Position wgsPos = swePos.ToWGS84();
@@ -93,98 +136,79 @@ namespace AI
                     return new NvdbArcGeometry()
                     {
                         id = id,
+                        length = double.Parse(length, CultureInfo.InvariantCulture) / 1000,
                         locations = locations
                     };
                 }).ToList();
 
             //Creates an almost empty arc to be compared against the json data 
-
             IEnumerable<Arc_DTO> speedArcs = arcGeometry
                 .Where(n => arcInfoById[n.id].Any())
                 .Select(m =>
                 {
                     return new Arc_DTO()
                     {
+                        id = m.id,
                         start = m.locations.First(),
                         stop = m.locations.Last(),
                         locations = m.locations,
+                        length = m.length,
                         speed = arcInfoById[m.id].First().speed
                     };
                 });
 
-            return speedArcs;
+            IEnumerable<Node_DTO> nodes = null;
+            nodes = nodeInfos.Select(NI =>
+            {
+                return new Node_DTO()
+                {
+                    id = NI.ID,
+                    location = NI.location
+                };
+            });
+
+            Network_DTO network = new Network_DTO();
+            network.id = "XML";
+            network.arcs = speedArcs;
+            network.nodes = nodes;
+            network.restrictions = null;
+
+            return network;
         }
 
-        public List<Arc_DTO> FindArc(IEnumerable<Arc_DTO> a, IEnumerable<Arc_DTO> b)
+        private IEnumerable<Arc_DTO> GetFromAndToNodes(IEnumerable<NvdbNodeInfo> nodeInfos, Arc_DTO arc)
         {
-            List<Arc_DTO> matchList = new List<Arc_DTO>();
-            foreach (var aa in a)
+            foreach (var n in nodeInfos)
             {
-                Arc_DTO closest = null;
-                foreach (var bb in b)
+                if (n.refNodeParts.Contains(arc.id))
                 {
-                    closest = FindArc(aa, bb, closest);
-                }
-                if (closest != null)
-                {
-                    matchList.Add(closest);
+                    if (n.IsClose(arc.locations.First()))
+                        arc.fromNodeId = n.ID;
+                    else if (n.IsClose(arc.locations.Last()))
+                        arc.toNodeId = n.ID;
+                    else
+                        return null;
                 }
             }
-            return matchList;
+            return null;
         }
 
-        public Arc_DTO FindArc(Arc_DTO a, Arc_DTO b, Arc_DTO closest)
+        //Get the object id from the port id by removing substring from "/"
+        private string GetUntilOrEmpty(string text)
         {
-            var startDist = Processing.CalculateDistanceInKilometers(a.start, b.start);
-            var stopDist = Processing.CalculateDistanceInKilometers(a.stop, b.stop);
-            var flipStartDist = Processing.CalculateDistanceInKilometers(a.start, b.stop);
-            var flipStopDist = Processing.CalculateDistanceInKilometers(a.stop, b.start);
-
-            double start, stop;
-
-            if (startDist < flipStartDist)
+            string stopAt = "/";
+            if (!string.IsNullOrWhiteSpace(text))
             {
-                start = startDist;
-                stop = stopDist;
-            }
-            else
-            {
-                start = flipStartDist;
-                stop = flipStopDist;
-            }
-
-            if (start < THRESHOLD && stop < THRESHOLD && closest == null)
-            {
-                closest = b;
-            }
-            else if (start < THRESHOLD && stop < THRESHOLD && closest != null)
-            {
-                var closestStartDist = Processing.CalculateDistanceInKilometers(a.start, closest.start);
-                var closestStopDist = Processing.CalculateDistanceInKilometers(a.stop, closest.stop);
-                var flipClosestStartDist = Processing.CalculateDistanceInKilometers(a.start, closest.stop);
-                var flipClosestStopDist = Processing.CalculateDistanceInKilometers(a.stop, closest.start);
-
-                double closestStart, closestStop;
-
-                if (closestStartDist < flipClosestStartDist)
+                int charLocation = text.IndexOf(stopAt, StringComparison.Ordinal);
+                if (charLocation > 0)
                 {
-                    closestStart = closestStartDist;
-                    closestStop = closestStopDist;
+                    return text.Substring(0, charLocation);
                 }
-                else
-                {
-                    closestStart = flipClosestStartDist;
-                    closestStop = flipClosestStopDist;
-                }
-
-                if (start < closestStart && stop < closestStop)
-                    closest = b;
             }
-            return closest;
+            return String.Empty;
         }
 
-
-        //public IEnumerable<Arc_DTO> FindSmallArcs(IEnumerable<Arc_DTO> a, IEnumerable<Arc_DTO> b)
+        //public List<Arc_DTO> FindArc(IEnumerable<Arc_DTO> a, IEnumerable<Arc_DTO> b)
         //{
         //    List<Arc_DTO> matchList = new List<Arc_DTO>();
         //    foreach (var aa in a)
@@ -192,7 +216,7 @@ namespace AI
         //        Arc_DTO closest = null;
         //        foreach (var bb in b)
         //        {
-        //            closest = FindSmallArc(aa, bb, closest);
+        //            closest = FindArc(aa, bb, closest);
         //        }
         //        if (closest != null)
         //        {
@@ -202,70 +226,108 @@ namespace AI
         //    return matchList;
         //}
 
-        //public Arc_DTO FindSmallArc(Arc_DTO a, Arc_DTO b, Arc_DTO closest)
+        //public Arc_DTO FindArc(Arc_DTO a, Arc_DTO b, Arc_DTO closest)
         //{
-        //    var fluff = b.locations.ToArray();
-        //    Arc_DTO temp = null;
-        //    foreach( var t in foo)
-        //    {
-        //        if()
+        //    var startDist = Processing.CalculateDistanceInKilometers(a.start, b.start);
+        //    var stopDist = Processing.CalculateDistanceInKilometers(a.stop, b.stop);
+        //    var flipStartDist = Processing.CalculateDistanceInKilometers(a.start, b.stop);
+        //    var flipStopDist = Processing.CalculateDistanceInKilometers(a.stop, b.start);
 
+        //    double start, stop;
+
+        //    if (startDist < flipStartDist)
+        //    {
+        //        start = startDist;
+        //        stop = stopDist;
+        //    }
+        //    else
+        //    {
+        //        start = flipStartDist;
+        //        stop = flipStopDist;
         //    }
 
+        //    if (start < THRESHOLD && stop < THRESHOLD && closest == null)
+        //    {
+        //        closest = b;
+        //    }
+        //    else if (start < THRESHOLD && stop < THRESHOLD && closest != null)
+        //    {
+        //        var closestStartDist = Processing.CalculateDistanceInKilometers(a.start, closest.start);
+        //        var closestStopDist = Processing.CalculateDistanceInKilometers(a.stop, closest.stop);
+        //        var flipClosestStartDist = Processing.CalculateDistanceInKilometers(a.start, closest.stop);
+        //        var flipClosestStopDist = Processing.CalculateDistanceInKilometers(a.stop, closest.start);
+
+        //        double closestStart, closestStop;
+
+        //        if (closestStartDist < flipClosestStartDist)
+        //        {
+        //            closestStart = closestStartDist;
+        //            closestStop = closestStopDist;
+        //        }
+        //        else
+        //        {
+        //            closestStart = flipClosestStartDist;
+        //            closestStop = flipClosestStopDist;
+        //        }
+
+        //        if (start < closestStart && stop < closestStop)
+        //            closest = b;
+        //    }
         //    return closest;
         //}
 
-        //Return the distance between two locations within a specified threshold, else return -1
 
+        ////Calculates the distance between two locations inside a threshold
+        //public double? IsClose(Location_DTO a, Location_DTO b)
+        //{
+        //    double? dist = Processing.CalculateDistanceInKilometers(a, b);
+        //    return dist < THRESHOLD ? dist : null;
+        //}
 
-        public double IsClose(Location_DTO a, Location_DTO b)
-        {
-            var dist = Processing.CalculateDistanceInKilometers(a, b);
-            return dist < THRESHOLD ? dist : -1;
-        }
+        ////Find the closest node in an arc to the reference node inside a threshold
+        //public Location_DTO FindClosestNodeInArc(IEnumerable<Location_DTO> locationList, Location_DTO refLocation)
+        //{
+        //    Location_DTO closest = locationList.First();
+        //    double? closestDist = IsClose(closest, refLocation);
 
-        public Location_DTO FindClosestNodeInArc(IEnumerable<Location_DTO> locationList, Location_DTO refLocation)
-        {
-            Location_DTO closest = locationList.First();
-            double closestDist = IsClose(closest, refLocation);
-            foreach (var node in locationList.Skip(1))
-            {
-                double dist = IsClose(node, refLocation);
-                if (dist != -1 && dist < closestDist)
-                {
-                    closest = node;
-                    closestDist = dist;
-                }
-            }
-            return closestDist != -1 ? closest : null;
-        }
+        //    foreach (var node in locationList.Skip(1))
+        //    {
+        //        double? dist = IsClose(node, refLocation);
+        //        if (dist != null && dist < closestDist)
+        //        {
+        //            closest = node;
+        //            closestDist = dist;
+        //        }
+        //    }
+        //    return closestDist != null ? closest : null;
+        //}
 
-        public Arc_DTO FindConnectingArc(IEnumerable<Arc_DTO> a, Arc_DTO b)
-        {
-            Arc_DTO foundArc = null;
-            foreach (var foo in a)
-            {
-                var closestStart = FindClosestNodeInArc(foo.locations, b.start);
-                var closestStop = FindClosestNodeInArc(foo.locations, b.stop);
-                if (closestStart != null && closestStop != null)
-                {
-                    if (foundArc == null)
-                    {
-                        foundArc.id = foo.id;
-                        foundArc.start = closestStart;
-                        foundArc.stop = closestStop;
-                    }
-                    else if (IsClose(closestStart, b.start) < IsClose(foundArc.start, b.start) &&
-                            IsClose(closestStop, b.stop) < IsClose(foundArc.stop, b.stop))
-                    {
-                        foundArc.id = foo.id;
-                        foundArc.start = closestStart;
-                        foundArc.stop = closestStop;
-                    }
-                }
-            }
-            return foundArc;
-        }
+        //public Arc_DTO FindConnectingArc(IEnumerable<Arc_DTO> a, Arc_DTO b)
+        //{
+        //    Arc_DTO foundArc = null;
+        //    foreach (var foo in a)
+        //    {
+        //        var closestStart = FindClosestNodeInArc(foo.locations, b.start);
+        //        var closestStop = FindClosestNodeInArc(foo.locations, b.stop);
+        //        if (closestStart != null && closestStop != null)
+        //        {
+        //            if (foundArc == null)
+        //            {
+        //                foundArc.id = foo.id;
+        //                foundArc.start = closestStart;
+        //                foundArc.stop = closestStop;
+        //            }
+        //            else if (IsClose(closestStart, b.start) < IsClose(foundArc.start, b.start) &&
+        //                    IsClose(closestStop, b.stop) < IsClose(foundArc.stop, b.stop))
+        //            {
+        //                foundArc.id = foo.id;
+        //                foundArc.start = closestStart;
+        //                foundArc.stop = closestStop;
+        //            }
+        //        }
+        //    }
+        //    return foundArc;
+        //}
     }
 }
 

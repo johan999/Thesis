@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -28,7 +27,7 @@ namespace AI
         public IEnumerable<Arc_DTO> GetDrivingRoads(Network_DTO network)
         {
             //Get roads for driving
-            IEnumerable<Arc_DTO> roadArcs = network.arcs.Skip(1)
+            IEnumerable<Arc_DTO> roadArcs = network.arcs
                 .Where(r => r.roadType == ArcRoadType.Driving).ToList();
 
             //Add start and stop nodes as variables for easier comparison
@@ -93,10 +92,10 @@ namespace AI
         public IEnumerable<Location_DTO> locations { get; set; }
     }
 
-    public class Speed
-    {
-        public int speed { get; set; }
-        public string[] startPos { get; set; }
-        public string[] endPos { get; set; }
-    }
+    //public class Speed
+    //{
+    //    public int speed { get; set; }
+    //    public string[] startPos { get; set; }
+    //    public string[] endPos { get; set; }
+    //}
 }
