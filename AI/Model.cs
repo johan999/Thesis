@@ -18,16 +18,15 @@ namespace AI
             //File path
             string jsonText = System.IO.File.ReadAllText(name);
 
-            //Deserialize json
-            Network_DTO network = JsonConvert.DeserializeObject<Network_DTO>(jsonText);
-
-            return network;
+            //Deserialize json and return
+            return JsonConvert.DeserializeObject<Network_DTO>(jsonText);
         }
 
         public IEnumerable<Arc_DTO> GetDrivingRoads(Network_DTO network)
         {
             //Get roads for driving
-            IEnumerable<Arc_DTO> roadArcs = network.arcs
+            IEnumerable<Arc_DTO> roadArcs = network
+                .arcs
                 .Where(r => r.roadType == ArcRoadType.Driving).ToList();
 
             //Add start and stop nodes as variables for easier comparison
@@ -40,7 +39,6 @@ namespace AI
             return roadArcs;
         }
     }
-
     //Restriction for an arc
     public class ArcRestriction_DTO
     {
@@ -49,14 +47,12 @@ namespace AI
         public int type { get; set; }           //Restriction number
         public string typeText { get; set; }    //Restriction name       
     }
-
     //A node in the network
     public class Node_DTO
     {
         public string id { get; set; }              //Node id
         public Location_DTO location { get; set; }  //Node location lat, lon
     }
-
     public enum ArcRoadType
     {
         Unknown,
@@ -87,15 +83,31 @@ namespace AI
         public double lon { get; set; }
     }
 
-    public class Test_Location_DTO
+    public class NodeConnection
     {
-        public IEnumerable<Location_DTO> locations { get; set; }
+        public Node_DTO from;
+        public Node_DTO to;
+        public double weight;
+        public string arcId;
+
+        public NodeConnection(Node_DTO from, Node_DTO to, double weight, string id)
+        {
+            this.from = from;
+            this.to = to;
+            this.weight = weight;
+            this.arcId = id;
+        }
+
+        public NodeConnection CreateNodeConnection(Node_DTO f, Node_DTO t, Arc_DTO a)
+        {
+            NodeConnection connection = new NodeConnection(f, t, a.length, a.id);
+            return connection;
+        }
     }
 
-    //public class Speed
-    //{
-    //    public int speed { get; set; }
-    //    public string[] startPos { get; set; }
-    //    public string[] endPos { get; set; }
-    //}
+    public class MatchingArc
+    {
+        string nvdbArcId;
+        IEnumerable<string> optiplanArcIds;
+    }
 }

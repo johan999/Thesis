@@ -264,3 +264,5 @@ __pycache__/
 /AI/Test/test.json
 /AI/Data/Nkpg_hastighet_RT90_00.xml
 /AI/Data/Nkpg_hastighet_RT90_2.xml
+/AI/Data/nodeconnections.json
+/AI/Data/norrkoping_xml.json

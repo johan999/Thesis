@@ -23,7 +23,7 @@ namespace AI
         }
         public class NvdbNodeInfo
         {
-            public IEnumerable<string> refNodeParts;
+            public IEnumerable<string> connections;
             public string ID;
             public Location_DTO location;
         }
@@ -31,7 +31,6 @@ namespace AI
         public Network_DTO CreateNetworkFromXML(string name)
         {
             XDocument doc = XDocument.Load(name);
-
             //Nodes
             var nodeInfos = doc
                 .Descendants("NW_RefNode")
@@ -54,8 +53,8 @@ namespace AI
 
                             return new Location_DTO()
                             {
-                                lat = wgsPos.Latitude,
-                                lon = wgsPos.Longitude
+                                lat = Math.Round(wgsPos.Latitude, 7, MidpointRounding.AwayFromZero),
+                                lon = Math.Round(wgsPos.Longitude, 7, MidpointRounding.AwayFromZero)
                             };
                         });
 
@@ -68,12 +67,11 @@ namespace AI
 
                     return new NvdbNodeInfo()
                     {
-                        refNodeParts = refNodes,
+                        connections = refNodes,
                         ID = id,
                         location = locations.First()
                     };
                 });
-
             //Arc
             var arcInfos = doc
                 .Descendants("FI_ChangedFeatureWithHistory")
@@ -128,8 +126,8 @@ namespace AI
 
                             return new Location_DTO()
                             {
-                                lat = wgsPos.Latitude,
-                                lon = wgsPos.Longitude
+                                lat = Math.Round(wgsPos.Latitude, 7, MidpointRounding.AwayFromZero),
+                                lon = Math.Round(wgsPos.Longitude, 7, MidpointRounding.AwayFromZero)
                             };
                         });
 
@@ -140,7 +138,6 @@ namespace AI
                         locations = locations
                     };
                 }).ToList();
-
             //Creates an almost empty arc to be compared against the json data 
             IEnumerable<Arc_DTO> speedArcs = arcGeometry
                 .Where(n => arcInfoById[n.id].Any())
@@ -155,7 +152,9 @@ namespace AI
                         length = m.length,
                         speed = arcInfoById[m.id].First().speed
                     };
-                });
+                }).ToList();
+
+            var completeArcs = GetFromAndToNodes(nodeInfos, speedArcs);
 
             IEnumerable<Node_DTO> nodes = null;
             nodes = nodeInfos.Select(NI =>
@@ -167,30 +166,51 @@ namespace AI
                 };
             });
 
-            Network_DTO network = new Network_DTO();
-            network.id = "XML";
-            network.arcs = speedArcs;
-            network.nodes = nodes;
-            network.restrictions = null;
-
+            Network_DTO network = new Network_DTO()
+            {
+                id = "XML",
+                arcs = speedArcs,
+                nodes = nodes,
+                restrictions = null
+            };
             return network;
         }
 
-        private IEnumerable<Arc_DTO> GetFromAndToNodes(IEnumerable<NvdbNodeInfo> nodeInfos, Arc_DTO arc)
+        private IEnumerable<Arc_DTO> GetFromAndToNodes(IEnumerable<NvdbNodeInfo> nodeInfos, IEnumerable<Arc_DTO> arcs)
         {
-            foreach (var n in nodeInfos)
+            //To check progress
+            int counter = 0;
+            foreach (var arc in arcs)
             {
-                if (n.refNodeParts.Contains(arc.id))
+                if (counter % 1000 == 0)
                 {
-                    if (n.IsClose(arc.locations.First()))
-                        arc.fromNodeId = n.ID;
-                    else if (n.IsClose(arc.locations.Last()))
-                        arc.toNodeId = n.ID;
-                    else
-                        return null;
+                    Console.WriteLine(counter);
                 }
+                bool from = false;
+                bool to = false;
+                foreach (var node in nodeInfos)
+                {
+                    if (from && to)
+                    {
+                        break;
+                    }
+                    else if (node.connections.Contains(arc.id))
+                    {
+                        if (IsClose(node.location, arc.locations.First()))
+                        {
+                            arc.fromNodeId = node.ID;
+                            from = true;
+                        }
+                        else if (IsClose(node.location, arc.locations.Last()))
+                        {
+                            arc.toNodeId = node.ID;
+                            to = true;
+                        }
+                    }
+                }
+                counter++;
             }
-            return null;
+            return arcs;
         }
 
         //Get the object id from the port id by removing substring from "/"
@@ -208,126 +228,13 @@ namespace AI
             return String.Empty;
         }
 
-        //public List<Arc_DTO> FindArc(IEnumerable<Arc_DTO> a, IEnumerable<Arc_DTO> b)
-        //{
-        //    List<Arc_DTO> matchList = new List<Arc_DTO>();
-        //    foreach (var aa in a)
-        //    {
-        //        Arc_DTO closest = null;
-        //        foreach (var bb in b)
-        //        {
-        //            closest = FindArc(aa, bb, closest);
-        //        }
-        //        if (closest != null)
-        //        {
-        //            matchList.Add(closest);
-        //        }
-        //    }
-        //    return matchList;
-        //}
-
-        //public Arc_DTO FindArc(Arc_DTO a, Arc_DTO b, Arc_DTO closest)
-        //{
-        //    var startDist = Processing.CalculateDistanceInKilometers(a.start, b.start);
-        //    var stopDist = Processing.CalculateDistanceInKilometers(a.stop, b.stop);
-        //    var flipStartDist = Processing.CalculateDistanceInKilometers(a.start, b.stop);
-        //    var flipStopDist = Processing.CalculateDistanceInKilometers(a.stop, b.start);
-
-        //    double start, stop;
-
-        //    if (startDist < flipStartDist)
-        //    {
-        //        start = startDist;
-        //        stop = stopDist;
-        //    }
-        //    else
-        //    {
-        //        start = flipStartDist;
-        //        stop = flipStopDist;
-        //    }
-
-        //    if (start < THRESHOLD && stop < THRESHOLD && closest == null)
-        //    {
-        //        closest = b;
-        //    }
-        //    else if (start < THRESHOLD && stop < THRESHOLD && closest != null)
-        //    {
-        //        var closestStartDist = Processing.CalculateDistanceInKilometers(a.start, closest.start);
-        //        var closestStopDist = Processing.CalculateDistanceInKilometers(a.stop, closest.stop);
-        //        var flipClosestStartDist = Processing.CalculateDistanceInKilometers(a.start, closest.stop);
-        //        var flipClosestStopDist = Processing.CalculateDistanceInKilometers(a.stop, closest.start);
-
-        //        double closestStart, closestStop;
-
-        //        if (closestStartDist < flipClosestStartDist)
-        //        {
-        //            closestStart = closestStartDist;
-        //            closestStop = closestStopDist;
-        //        }
-        //        else
-        //        {
-        //            closestStart = flipClosestStartDist;
-        //            closestStop = flipClosestStopDist;
-        //        }
-
-        //        if (start < closestStart && stop < closestStop)
-        //            closest = b;
-        //    }
-        //    return closest;
-        //}
-
-
-        ////Calculates the distance between two locations inside a threshold
-        //public double? IsClose(Location_DTO a, Location_DTO b)
-        //{
-        //    double? dist = Processing.CalculateDistanceInKilometers(a, b);
-        //    return dist < THRESHOLD ? dist : null;
-        //}
-
-        ////Find the closest node in an arc to the reference node inside a threshold
-        //public Location_DTO FindClosestNodeInArc(IEnumerable<Location_DTO> locationList, Location_DTO refLocation)
-        //{
-        //    Location_DTO closest = locationList.First();
-        //    double? closestDist = IsClose(closest, refLocation);
-
-        //    foreach (var node in locationList.Skip(1))
-        //    {
-        //        double? dist = IsClose(node, refLocation);
-        //        if (dist != null && dist < closestDist)
-        //        {
-        //            closest = node;
-        //            closestDist = dist;
-        //        }
-        //    }
-        //    return closestDist != null ? closest : null;
-        //}
-
-        //public Arc_DTO FindConnectingArc(IEnumerable<Arc_DTO> a, Arc_DTO b)
-        //{
-        //    Arc_DTO foundArc = null;
-        //    foreach (var foo in a)
-        //    {
-        //        var closestStart = FindClosestNodeInArc(foo.locations, b.start);
-        //        var closestStop = FindClosestNodeInArc(foo.locations, b.stop);
-        //        if (closestStart != null && closestStop != null)
-        //        {
-        //            if (foundArc == null)
-        //            {
-        //                foundArc.id = foo.id;
-        //                foundArc.start = closestStart;
-        //                foundArc.stop = closestStop;
-        //            }
-        //            else if (IsClose(closestStart, b.start) < IsClose(foundArc.start, b.start) &&
-        //                    IsClose(closestStop, b.stop) < IsClose(foundArc.stop, b.stop))
-        //            {
-        //                foundArc.id = foo.id;
-        //                foundArc.start = closestStart;
-        //                foundArc.stop = closestStop;
-        //            }
-        //        }
-        //    }
-        //    return foundArc;
-        //}
+        private bool IsClose(Location_DTO a, Location_DTO b)
+        {
+            if (Processing.CalculateDistanceInKilometers(a, b) < 0.0005)
+                return true;
+            else
+                return false;
+        }
     }
 }
 
