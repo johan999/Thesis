@@ -156,7 +156,17 @@ namespace AI
 
             var completeArcs = GetFromAndToNodes(nodeInfos, speedArcs);
 
+            var b = completeArcs.Where(p => p.id == "3:495470");
+            Console.WriteLine("stsop");
+
+
+
             IEnumerable<Node_DTO> nodes = null;
+
+
+
+            var c = speedArcs.Where(p => p.id == "3:495479");
+            Console.WriteLine("a");
             nodes = nodeInfos.Select(NI =>
             {
                 return new Node_DTO()
@@ -182,6 +192,8 @@ namespace AI
             int counter = 0;
             foreach (var arc in arcs)
             {
+
+
                 if (counter % 1000 == 0)
                 {
                     Console.WriteLine(counter);
@@ -190,12 +202,21 @@ namespace AI
                 bool to = false;
                 foreach (var node in nodeInfos)
                 {
+                    //if (node.location.lat > 58.5799 && node.location.lat < 58.5801
+                    //    && node.location.lon > 16.034 && node.location.lon < 16.0365)
+                    //{
+                    //    //Console.WriteLine("inne");
+                    //}
                     if (from && to)
                     {
                         break;
                     }
                     else if (node.connections.Contains(arc.id))
                     {
+                        if (arc.id == "3:495470")
+                        {
+                            Console.WriteLine("stop");
+                        }
                         if (IsClose(node.location, arc.locations.First()))
                         {
                             arc.fromNodeId = node.ID;

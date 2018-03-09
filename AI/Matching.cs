@@ -9,25 +9,20 @@ namespace AI
     {
         public Node_DTO GetNodeInOtherNetwork(Node_DTO origin, IEnumerable<Node_DTO> nodeList)
         {
+            //if (origin.id == "2:995188")
+            //    Console.WriteLine("stop");
             Node_DTO closestMatch = null;
             double closestDist = 999999999;
             foreach (var node in nodeList)
             {
-                //Liten optimering
-                double latDist = Math.Abs(origin.location.lat - node.location.lat);
-                double lonDist = Math.Abs(origin.location.lon - node.location.lon);
-                //Distance in latitude and longitude
-                if (latDist < 0.001 && lonDist < 0.001)
+                double dist = Processing.CalculateDistanceInKilometers(origin.location, node.location);
+                //Distance in km
+                if (dist < 0.02)
                 {
-                    double dist = Processing.CalculateDistanceInKilometers(origin.location, node.location);
-                    //Distance in km
-                    if (dist < 0.005)
+                    if (dist < closestDist)
                     {
-                        if (dist < closestDist)
-                        {
-                            closestDist = dist;
-                            closestMatch = node;
-                        }
+                        closestDist = dist;
+                        closestMatch = node;
                     }
                 }
             }

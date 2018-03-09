@@ -19,22 +19,13 @@ namespace AI
             ILookup<string, NodeConnection> table = null;
             Matching matcher = new Matching();
             Pathfinding pathfinder = new Pathfinding();
-            while (choice != 3)
+            while (choice != 4)
             {
                 Display menu = new Display();
                 choice = menu.Menu();
                 switch (choice)
                 {
                     case 1:
-                        //string[] files = Directory.GetFiles("Data/");
-                        //int count = 1;
-                        //Console.WriteLine("Choose file: ");
-                        //foreach (string s in files){
-                        //    Console.WriteLine(count + ". " + s);
-                        //    count++;
-                        //}
-                        //allNetworks = allNetworks.LoadJson(files[
-                        //    Convert.ToInt32(Console.ReadLine()) - 1]);
                         optiplanNetwork = optiplanNetwork.LoadJson("Data/norrkoping.json");
                         roadNetwork = optiplanNetwork.GetDrivingRoads(optiplanNetwork);
                         nvdbNetwork = nvdbNetwork.LoadJson("Data/norrkoping_xml.json");
@@ -43,6 +34,7 @@ namespace AI
                     case 2:
                         NVDBProcessing xmlProcessor = new NVDBProcessing();
                         var XMLNetwork = xmlProcessor.CreateNetworkFromXML("Data/Norrkoping_hastighet.xml");
+
                         var serializedNetwork = JsonConvert.SerializeObject(XMLNetwork);
                         File.WriteAllText(@"C:\Users\Johan Eliasson\source\repos\AI\AI\Data\norrkoping_xml.json", serializedNetwork);
 
@@ -51,46 +43,60 @@ namespace AI
                         //var matchingNetwork2 = xmlProcessor.FindSmallArcs(listOfArcSpeed, outfilteredNetwork);                        
                         break;
                     case 3:
-
                         var a = pathfinder.MatchPaths(optiplanNetwork, nvdbNetwork);
+                        List<string> nvdbArcs = new List<string>();
+                        List<string> optiplanArcs = new List<string>();
+
+                        foreach (var aa in a)
+                        {
+                            nvdbArcs.Add(aa.nvdbArcId);
+                            foreach (var bb in aa.optiplanArcIds)
+                            {
+                                if (bb != null)
+                                    optiplanArcs.Add(bb);
+                            }
+                        }
+
+                        var matches = JsonConvert.SerializeObject(a);
+                        File.WriteAllText(@"C:\Arc_import\matches.json", matches);
+
+                        //Matching arcs presented as the nvdb arcs
+                        var matching = nvdbNetwork.arcs
+                            .Where(i => nvdbArcs.Contains(i.id));
+                        var matchingRoads = JsonConvert.SerializeObject(matching);
+                        File.WriteAllText(@"C:\Arc_import\nvdbMatchedRoads.json", matchingRoads);
+
+                        //Matching arcs presented as the optiplan arcs
+                        var optiplanMatched = roadNetwork
+                            .Where(i => optiplanArcs.Contains(i.id));
+                        var optiplanMatchedRoads = JsonConvert.SerializeObject(optiplanMatched);
+                        File.WriteAllText(@"C:\Arc_import\optiplanMatchedRoads.json", optiplanMatchedRoads);
+
+                        //Outfiltered nvdb arcs 
+                        var nvdb = nvdbNetwork.arcs
+                            .Where(i => !nvdbArcs.Contains(i.id));
+                        var nvdbRoads = JsonConvert.SerializeObject(nvdb);
+                        File.WriteAllText(@"C:\Arc_import\nvdbRoads.json", nvdbRoads);
+
+                        //Outfilterd optiplan arcs
+                        var optiplan = roadNetwork
+                            .Where(i => !optiplanArcs.Contains(i.id));
+                        var optiplanRoads = JsonConvert.SerializeObject(optiplan);
+                        File.WriteAllText(@"C:\Arc_import\optiplanRoads.json", optiplanRoads);
+
+                        /*var nvdbOriginal = nvdbNetwork.arcs;
+                        var nvdbOriginalRoads = JsonConvert.SerializeObject(nvdbOriginal);
+                        File.WriteAllText(@"C:\Arc_import\nvdbOriginalRoads.json", nvdbOriginalRoads);
+
+                        var optiplanOriginal = roadNetwork;
+                        var optiplanOriginalRoads = JsonConvert.SerializeObject(optiplanOriginal);
+                        File.WriteAllText(@"C:\Arc_import\optiplanOriginalRoads.json", optiplanOriginalRoads);*/
+
                         break;
                     case 4:
                         Console.WriteLine("Bye");
                         break;
-                        //case 2:
-                        //    if (allNetworks == null){
-                        //        Console.WriteLine("Did not load or empty network");
-                        //        break;
-                        //    }
-                        //    Console.WriteLine("Learning rate?[0,0 - 1,0]");
-                        //    double learningRate = Convert.ToDouble(Console.ReadLine());
-                        //    ANN = NeuralNetwork.CreateANN(inputList, outputList, learningRate);
-                        //    break;
-                        //case 3:
-                        //    if (ANN == null){
-                        //        Console.WriteLine("Could not save: Neural network is null");
-                        //        break;
-                        //    }
-                        //    Console.WriteLine("Give name to the neural network:");
-                        //    string name = Console.ReadLine();
-                        //    ANN.Save("ANN/" + name + ".json");
-                        //    Console.WriteLine("Saved neural network");
-                        //    break;
-                        //case 4:
-                        //    string[] AIs = Directory.GetFiles("ANN/");
-                        //    count = 1;
-                        //    Console.WriteLine("Choose file: ");
-                        //    foreach (string s in AIs){
-                        //        Console.WriteLine(count + ". " + s);
-                        //        count++;
-                        //    }
-                        //    ANN = (ActivationNetwork)Network.Load(AIs[Convert.ToInt32(Console.ReadLine()) - 1]);
-                        //    if (ANN == null){
-                        //        Console.WriteLine("Could not load network");
-                        //        break;
-                        //    }
-                        //    Console.WriteLine("Loaded neural network");
-                        //    break;
+
                         //case 5:
                         //    if (inputList != null && ANN != null && outputList != null){
                         //        double[][] output = NeuralNetwork.ComputeNetwork(inputList, ANN);
@@ -109,6 +115,7 @@ namespace AI
                         //        break;
                         //    }
                         //    break;
+
                         //    var filteredRoad = roadNetwork.Except(matchingNetwork.Distinct()).ToList();
                         //    //var roadList = JsonConvert.SerializeObject(filteredRoad);
                         //    var roadList = JsonConvert.SerializeObject(roadNetwork);
@@ -126,6 +133,7 @@ namespace AI
             }
         }
     }
+
     class Display
     {
         //Interface stuff
@@ -134,7 +142,8 @@ namespace AI
             Console.WriteLine("Choose option: \n" +
                 "1. Load road data\n" +
                 "2. Load XML\n" +
-                "3. Exit");
+                "3. Match networks\n" +
+                "4. Exit");
             return Convert.ToInt32(Console.ReadLine());
         }
     }

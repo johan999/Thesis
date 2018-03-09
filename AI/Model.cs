@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -107,7 +108,42 @@ namespace AI
 
     public class MatchingArc
     {
-        string nvdbArcId;
-        IEnumerable<string> optiplanArcIds;
+        public string nvdbArcId;
+        public IEnumerable<string> optiplanArcIds;
+    }
+
+    public class NodePath : IEquatable<NodePath>
+    {
+        public Node_DTO currentNode;
+        public Node_DTO previousNode;
+        public double distance;
+        public string arcId;
+
+        public NodePath(Node_DTO currentNode, Node_DTO previousNode, double distance, string arcId)
+        {
+            this.currentNode = currentNode;
+            this.previousNode = previousNode;
+            this.distance = distance;
+            this.arcId = arcId;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as NodePath);
+        }
+
+        private bool SameNodes(NodePath leg) =>
+            (leg.currentNode?.id == currentNode?.id && leg.previousNode?.id == previousNode?.id) ||
+            (leg.currentNode?.id == previousNode?.id && leg.previousNode?.id == currentNode?.id);
+
+        public bool Equals(NodePath leg)
+        {
+            return leg != null && SameNodes(leg);
+        }
+
+        public override int GetHashCode()
+        {
+            return currentNode.id.GetHashCode() ^ previousNode.GetHashCode();
+        }
     }
 }
