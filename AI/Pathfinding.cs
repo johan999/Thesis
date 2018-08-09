@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace AI
@@ -12,6 +13,8 @@ namespace AI
 
         public IEnumerable<MatchingArc> MatchPaths(Network_DTO optiplan, Network_DTO nvdb)
         {
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
             //Filters out walking roads
             var optiplanLookup = matcher.GenerateTable(optiplan.nodes,
                 optiplan.arcs.Where(i => i.roadType == ArcRoadType.Driving));
@@ -19,6 +22,7 @@ namespace AI
 
             List<MatchingArc> matches = new List<MatchingArc>();
             int counter = 1;
+            int numOfMatches = 0;
             foreach (var nvdbArc in nvdb.arcs)
             {
                 open.Clear();
@@ -26,7 +30,7 @@ namespace AI
                 //Noder
                 if (nvdbArc.fromNodeId == null || nvdbArc.toNodeId == null)
                 {
-                    Console.WriteLine("Finns ej");
+                    //Console.WriteLine("Finns ej");
                     continue;
                 }
 
@@ -40,15 +44,18 @@ namespace AI
                     if (path != null)
                     {
                         matches.Add(path);
+                        numOfMatches++;
                     }
                 }
                 else
                 {
-                    Console.WriteLine("null");
+                    //Console.WriteLine("null");
                 }
-                Console.WriteLine(counter + " of  " + nvdb.arcs.Count());
+                //Console.WriteLine(counter + " of  " + nvdb.arcs.Count());
                 counter++;
             }
+            sw.Stop();
+            Console.WriteLine("Matched " + numOfMatches + " of " + nvdb.arcs.Count() + " in " + sw.Elapsed);
             return matches;
         }
 
@@ -73,6 +80,7 @@ namespace AI
                         .OrderBy(t => t.distance)
                         .FirstOrDefault();
 
+                // This should be removed for final calculations? Or else there is chance that the algorithm stops before the real answer
                 if (closed.Count > 300)
                 {
                     //Console.WriteLine("Start: " + start.location.lat + " " + start.location.lon +
@@ -126,7 +134,7 @@ namespace AI
                         if (Math.Abs(distance - ILConnection.weight) < distance * 0.025)
                         {
                             found = true;
-                            Console.WriteLine(ILConnection.arcId);
+                            //Console.WriteLine(ILConnection.arcId);
                             np = new NodePath(
                                 ILConnection.to,
                                 ILConnection.from,

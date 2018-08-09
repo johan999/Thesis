@@ -26,17 +26,17 @@ namespace AI
                 switch (choice)
                 {
                     case 1:
-                        optiplanNetwork = optiplanNetwork.LoadJson("Data/norrkoping.json");
+                        optiplanNetwork = optiplanNetwork.LoadJson(@"D:\Repos\ThesisData\Data\norrkoping.json");
                         roadNetwork = optiplanNetwork.GetDrivingRoads(optiplanNetwork);
-                        nvdbNetwork = nvdbNetwork.LoadJson("Data/norrkoping_xml.json");
+                        nvdbNetwork = nvdbNetwork.LoadJson(@"D:\Repos\ThesisData\Data\norrkoping_xml.json");
 
                         break;
                     case 2:
                         NVDBProcessing xmlProcessor = new NVDBProcessing();
-                        var XMLNetwork = xmlProcessor.CreateNetworkFromXML("Data/Norrkoping_hastighet.xml");
+                        var XMLNetwork = xmlProcessor.CreateNetworkFromXML(@"D:\Repos\ThesisData\Data\Norrkoping_hastighet.xml");
 
                         var serializedNetwork = JsonConvert.SerializeObject(XMLNetwork);
-                        File.WriteAllText(@"C:\Users\Johan Eliasson\source\repos\AI\AI\Data\norrkoping_xml.json", serializedNetwork);
+                        File.WriteAllText(@"D:\Repos\Thesis\AI\Data\norrkoping_xml.json", serializedNetwork);
 
                         //matchingNetwork = xmlProcessor.FindArc(roadNetwork, listOfArcSpeed).ToList();
                         //var outfilteredNetwork = roadNetwork.Except(matchingNetwork);
@@ -58,39 +58,39 @@ namespace AI
                         }
 
                         var matches = JsonConvert.SerializeObject(a);
-                        File.WriteAllText(@"C:\Arc_import\matches.json", matches);
+                        File.WriteAllText(@"D:\Repos\ThesisData\matches.json", matches);
 
                         //Matching arcs presented as the nvdb arcs
                         var matching = nvdbNetwork.arcs
                             .Where(i => nvdbArcs.Contains(i.id));
                         var matchingRoads = JsonConvert.SerializeObject(matching);
-                        File.WriteAllText(@"C:\Arc_import\nvdbMatchedRoads.json", matchingRoads);
+                        File.WriteAllText(@"D:\Repos\ThesisData\nvdbMatchedRoads.json", matchingRoads);
 
                         //Matching arcs presented as the optiplan arcs
                         var optiplanMatched = roadNetwork
                             .Where(i => optiplanArcs.Contains(i.id));
                         var optiplanMatchedRoads = JsonConvert.SerializeObject(optiplanMatched);
-                        File.WriteAllText(@"C:\Arc_import\optiplanMatchedRoads.json", optiplanMatchedRoads);
+                        File.WriteAllText(@"D:\Repos\ThesisData\optiplanMatchedRoads.json", optiplanMatchedRoads);
 
                         //Outfiltered nvdb arcs 
                         var nvdb = nvdbNetwork.arcs
                             .Where(i => !nvdbArcs.Contains(i.id));
                         var nvdbRoads = JsonConvert.SerializeObject(nvdb);
-                        File.WriteAllText(@"C:\Arc_import\nvdbRoads.json", nvdbRoads);
+                        File.WriteAllText(@"D:\Repos\ThesisData\nvdbRoads.json", nvdbRoads);
 
                         //Outfilterd optiplan arcs
                         var optiplan = roadNetwork
                             .Where(i => !optiplanArcs.Contains(i.id));
                         var optiplanRoads = JsonConvert.SerializeObject(optiplan);
-                        File.WriteAllText(@"C:\Arc_import\optiplanRoads.json", optiplanRoads);
+                        File.WriteAllText(@"D:\Repos\ThesisData\optiplanRoads.json", optiplanRoads);
 
                         /*var nvdbOriginal = nvdbNetwork.arcs;
                         var nvdbOriginalRoads = JsonConvert.SerializeObject(nvdbOriginal);
-                        File.WriteAllText(@"C:\Arc_import\nvdbOriginalRoads.json", nvdbOriginalRoads);
+                        File.WriteAllText(@"D:\Repos\ThesisData\nvdbOriginalRoads.json", nvdbOriginalRoads);
 
                         var optiplanOriginal = roadNetwork;
                         var optiplanOriginalRoads = JsonConvert.SerializeObject(optiplanOriginal);
-                        File.WriteAllText(@"C:\Arc_import\optiplanOriginalRoads.json", optiplanOriginalRoads);*/
+                        File.WriteAllText(@"D:\Repos\ThesisData\optiplanOriginalRoads.json", optiplanOriginalRoads);*/
 
                         break;
                     case 4:
